@@ -1,0 +1,25 @@
+#!/bin/sh
+# Minimal udhcpc hook for Alpine/BusyBox. Called with deconfig/bound/renew.
+set -u
+
+case "${1:-}" in
+    deconfig)
+        ip addr flush dev "$interface" 2>/dev/null || true
+        ;;
+    bound|renew)
+        ip addr flush dev "$interface" 2>/dev/null || true
+        ifconfig "$interface" "$ip" netmask "$mask" up
+        route del default 2>/dev/null || true
+        if [ -n "${router:-}" ]; then
+            route add default gw "$router" 2>/dev/null || true
+        fi
+        if [ -n "${dns:-}" ]; then
+            : > /etc/resolv.conf
+            for server in $dns; do
+                echo "nameserver $server" >> /etc/resolv.conf
+            done
+        fi
+        echo "[udhcpc] eth0=$ip/$mask gw=${router:-none} dns=${dns:-none}"
+        ;;
+esac
+exit 0
