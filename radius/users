@@ -1,0 +1,135 @@
+# FreeRADIUS users for the campus lab.
+#
+# Authentication methods:
+#   - staff/student/guest: EAP-MD5 (wpa_supplicant eap=MD5, see endpoints/client/)
+#   - IoT sensors:         MAB (MAC Authentication Bypass); the MAC is both the
+#                          RADIUS User-Name and the password Cisco IOS sends.
+#
+# Dynamic VLAN reply attributes required by the assignment:
+#   Tunnel-Type               = VLAN
+#   Tunnel-Medium-Type        = IEEE-802
+#   Tunnel-Private-Group-Id   = <VLAN ID>
+#
+# The switch applies the VLAN because it has:
+#   aaa authorization network default group radius
+#
+# PASSWORDS: change these together with radius/secrets.env and
+# endpoints/client/wpa_supplicant-*.conf. tests/verify_configs.py checks them.
+#
+# MAC FORMAT: Cisco IOS MAB normally sends the MAC in dotted form, for example
+# 0200.0000.4001. Aliases for the other common formats (plain 12 hex digits,
+# hyphens, colons) are included at the end of this file. If `radiusd -X` shows
+# a different User-Name format on your image (for example uppercase), add one
+# alias for that exact string. The VLAN attributes stay the same.
+
+# ---------------------------------------------------------------------------
+# STAFF -> VLAN 10
+# ---------------------------------------------------------------------------
+staff1  Cleartext-Password := "Staff1Pass!"
+        Tunnel-Type = VLAN,
+        Tunnel-Medium-Type = IEEE-802,
+        Tunnel-Private-Group-Id = "10"
+
+staff2  Cleartext-Password := "Staff2Pass!"
+        Tunnel-Type = VLAN,
+        Tunnel-Medium-Type = IEEE-802,
+        Tunnel-Private-Group-Id = "10"
+
+staff3  Cleartext-Password := "Staff3Pass!"
+        Tunnel-Type = VLAN,
+        Tunnel-Medium-Type = IEEE-802,
+        Tunnel-Private-Group-Id = "10"
+
+# ---------------------------------------------------------------------------
+# STUDENT -> VLAN 20
+# ---------------------------------------------------------------------------
+student1  Cleartext-Password := "Student1Pass!"
+          Tunnel-Type = VLAN,
+          Tunnel-Medium-Type = IEEE-802,
+          Tunnel-Private-Group-Id = "20"
+
+student2  Cleartext-Password := "Student2Pass!"
+          Tunnel-Type = VLAN,
+          Tunnel-Medium-Type = IEEE-802,
+          Tunnel-Private-Group-Id = "20"
+
+student3  Cleartext-Password := "Student3Pass!"
+          Tunnel-Type = VLAN,
+          Tunnel-Medium-Type = IEEE-802,
+          Tunnel-Private-Group-Id = "20"
+
+# ---------------------------------------------------------------------------
+# GUEST -> VLAN 30
+# ---------------------------------------------------------------------------
+guest1  Cleartext-Password := "Guest1Pass!"
+        Tunnel-Type = VLAN,
+        Tunnel-Medium-Type = IEEE-802,
+        Tunnel-Private-Group-Id = "30"
+
+# ---------------------------------------------------------------------------
+# IOT sensors -> VLAN 40 (MAB)
+# MACs match radius/secrets.env SENSOR_MAC_* and the GNS3 Docker node MACs.
+# ---------------------------------------------------------------------------
+0200.0000.4001  Cleartext-Password := "0200.0000.4001"
+                Tunnel-Type = VLAN,
+                Tunnel-Medium-Type = IEEE-802,
+                Tunnel-Private-Group-Id = "40"
+
+0200.0000.4002  Cleartext-Password := "0200.0000.4002"
+                Tunnel-Type = VLAN,
+                Tunnel-Medium-Type = IEEE-802,
+                Tunnel-Private-Group-Id = "40"
+
+0200.0000.4003  Cleartext-Password := "0200.0000.4003"
+                Tunnel-Type = VLAN,
+                Tunnel-Medium-Type = IEEE-802,
+                Tunnel-Private-Group-Id = "40"
+
+# MAB username-format aliases. Cisco images differ: some send the dotted MAC
+# above, others send 12 hex digits, hyphens or colons. These aliases keep the
+# same three sensors working without editing the switch. Add a new alias if
+# `radiusd -X` shows a format not listed here (including uppercase).
+020000004001  Cleartext-Password := "020000004001"
+              Tunnel-Type = VLAN,
+              Tunnel-Medium-Type = IEEE-802,
+              Tunnel-Private-Group-Id = "40"
+
+020000004002  Cleartext-Password := "020000004002"
+              Tunnel-Type = VLAN,
+              Tunnel-Medium-Type = IEEE-802,
+              Tunnel-Private-Group-Id = "40"
+
+020000004003  Cleartext-Password := "020000004003"
+              Tunnel-Type = VLAN,
+              Tunnel-Medium-Type = IEEE-802,
+              Tunnel-Private-Group-Id = "40"
+
+02-00-00-00-40-01  Cleartext-Password := "02-00-00-00-40-01"
+                   Tunnel-Type = VLAN,
+                   Tunnel-Medium-Type = IEEE-802,
+                   Tunnel-Private-Group-Id = "40"
+
+02-00-00-00-40-02  Cleartext-Password := "02-00-00-00-40-02"
+                   Tunnel-Type = VLAN,
+                   Tunnel-Medium-Type = IEEE-802,
+                   Tunnel-Private-Group-Id = "40"
+
+02-00-00-00-40-03  Cleartext-Password := "02-00-00-00-40-03"
+                   Tunnel-Type = VLAN,
+                   Tunnel-Medium-Type = IEEE-802,
+                   Tunnel-Private-Group-Id = "40"
+
+02:00:00:00:40:01  Cleartext-Password := "02:00:00:00:40:01"
+                   Tunnel-Type = VLAN,
+                   Tunnel-Medium-Type = IEEE-802,
+                   Tunnel-Private-Group-Id = "40"
+
+02:00:00:00:40:02  Cleartext-Password := "02:00:00:00:40:02"
+                   Tunnel-Type = VLAN,
+                   Tunnel-Medium-Type = IEEE-802,
+                   Tunnel-Private-Group-Id = "40"
+
+02:00:00:00:40:03  Cleartext-Password := "02:00:00:00:40:03"
+                   Tunnel-Type = VLAN,
+                   Tunnel-Medium-Type = IEEE-802,
+                   Tunnel-Private-Group-Id = "40"

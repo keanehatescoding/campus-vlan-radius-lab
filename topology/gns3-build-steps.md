@@ -144,10 +144,11 @@ Open each sensor node's configuration and set the environment variables:
 
 The sensor MACs must match `radius/users`; MAB uses the Ethernet source MAC as
 the RADIUS User-Name. Prefer the GNS3 Docker node's **MAC address** field if
-your version offers one. Otherwise the container entrypoint normalises the
-dotted `SENSOR_MAC` value to `02:00:00:00:40:01`, bounces `eth0`, and sets it;
-this requires `NET_ADMIN` (GNS3 usually grants it; if not, set the MAC in GNS3
-instead).
+your version offers one; that field normally expects the colon form
+(`02:00:00:00:40:01`), while `SENSOR_MAC` accepts the dotted form in the table.
+Otherwise the container entrypoint normalises the dotted `SENSOR_MAC` value to
+`02:00:00:00:40:01`, bounces `eth0`, and sets it; this requires `NET_ADMIN`
+(GNS3 usually grants it; if not, set the MAC in GNS3 instead).
 
 Leave `SENSOR_DHCP=1` so the container uses `udhcpc` on VLAN 40. The first
 DHCP discover may be sent before MAB completes; `udhcpc` retries for 90 seconds.

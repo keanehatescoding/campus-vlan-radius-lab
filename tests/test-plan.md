@@ -151,13 +151,14 @@ running; SW2 g0/1 is connected.
    show dot1x interface GigabitEthernet0/1 details
    ```
 
-3. On the Docker host, capture the RADIUS exchange in debug mode. Stop the
-   compose RADIUS service, start a debug instance on the same macvlan network,
-   then trigger a reconnect:
+3. On the Docker host, capture the RADIUS exchange in debug mode. Stop and
+   remove the compose RADIUS container (this releases 192.168.50.10), start a
+   debug instance on the same macvlan network, then trigger a reconnect:
 
    ```sh
    cd network-project/radius
    docker compose stop radius
+   docker compose rm -f radius
    docker network ls | grep campus-network_server
    docker run --rm --network campus-network_server --ip 192.168.50.10 \
      -v "$PWD/clients.conf:/etc/freeradius/clients.conf:ro" \
@@ -165,8 +166,10 @@ running; SW2 g0/1 is connected.
      freeradius/freeradius-server:3.2.3 freeradius -X
    ```
 
-   (The network name may be `campus-network_server` or
-   `network-project_server` depending on the Compose project name.)
+   Press Ctrl-C when the exchange is captured, then restore the service with
+   `docker compose up -d radius`. (The network name may be
+   `campus-network_server` or `network-project_server` depending on the
+   Compose project name.)
 
 **Expected:** `show authentication sessions` shows interface g0/1, method
 `dot1x`, status `Auth`, and **VLAN 10**. The RADIUS debug shows an
@@ -340,10 +343,15 @@ STAFF_IN permit counters.
 | 7 | 192.168.99.11 | `ping -c 3 192.168.99.11` | Fail (MGMT denied) |
 | 8 | 192.168.50.10 | `ping -c 3 192.168.50.10` | Fail (SERVER denied) |
 | 9 | 192.168.50.20 | `ping -c 3 192.168.50.20` | Fail (SERVER/MQTT denied) |
-| 10 | 192.168.20.22 | `ping -c 3 192.168.20.22` | Fail (other student; RFC1918 deny) |
+
+> A ping between two hosts in VLAN 20 (for example student1 to student2) is
+> **not** in this matrix. That traffic is switched by SW2 and never reaches
+> R1's `STUDENT_IN` ACL, so it succeeds. The ACLs enforce inter-VLAN policy;
+> same-VLAN peer isolation would require private VLANs or `switchport
+> protected` on the access ports, which is outside this brief.
 
 **Evidence:** Output for all rows; R1 `show access-lists` STUDENT_IN deny
-counters for rows 5-10.
+counters for rows 5-9.
 
 ### T13 - GUEST ACL matrix
 

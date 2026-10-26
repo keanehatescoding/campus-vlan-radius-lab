@@ -61,6 +61,7 @@ network-project/
     verify_configs.py             offline consistency checker
   report/
     report-outline.md             report sections and screenshot checklist
+    evidence/                     test screenshots and copied console output
 ```
 
 ## First 10 minutes
@@ -138,7 +139,7 @@ Use [tests/test-plan.md](tests/test-plan.md). The minimum evidence set is in
 | DHCP | R1 pools for 10/20/30/40, leases from .21 |
 | NAT | PAT of 10/20/30/40 out R1 g0/2; server and MGMT not translated |
 | Firewall | `STAFF_IN`, `STUDENT_IN`, `GUEST_IN`, `IOT_IN`, `MGMT_IN`, inbound on R1 subinterfaces |
-| RADIUS | FreeRADIUS 3.2.3, EAP-MD5 for users, MAB for sensors, dynamic VLAN via Tunnel-* attributes |
+| RADIUS | FreeRADIUS 3.2.3, EAP-MD5 for users, MAB for sensors, named group `CAMPUS-RADIUS`, dynamic VLAN via Tunnel-* attributes |
 
 ## Secrets and consistency
 
@@ -185,8 +186,10 @@ commands with `docker` in place of `podman`.
 |---|---|---|
 | Config consistency | `python3 tests/verify_configs.py` | **415 passed, 0 failed** |
 | Compose syntax | `docker compose -f radius/docker-compose.yml config` | Valid; network `campus-network_server`, macvlan parent `srv-mac`, RADIUS .10, MQTT .20 |
+| Server bridge script | `unshare -rn ./radius/setup-server-bridge.sh` in a throwaway network namespace | Creates `br-srv`, `srv-mac` and `srv-br`; `srv-br` is enslaved to `br-srv` |
 | FreeRADIUS syntax | `freeradius -CX` in `freeradius/freeradius-server:3.2.3` with the repo's `clients.conf` + `users` | **Configuration appears to be OK** |
 | RADIUS PAP/VLAN | `radtest staff1 ...` and `radtest 0200.0000.4001 ...` | Access-Accept with `Tunnel-Type=VLAN`, `Tunnel-Medium-Type=IEEE-802`, `Tunnel-Private-Group-Id="10"` / `"40"` |
+| RADIUS MAB aliases | `radtest` with plain, hyphen and colon MAC forms | Access-Accept for all three formats, VLAN 40 |
 | RADIUS EAP-MD5 | `eapol_test` against the exact supplicant profiles (control-interface line removed for the host test) | **SUCCESS** for staff1/2/3, student1/2/3, guest1; wrong-password profile returns **FAILURE** |
 | MQTT payload | Local Mosquitto 2.1 + `sensor.py`, three types, 1-second test interval | JSON with `id`, `type`, `value`, `timestamp`; all three IDs observed |
 | Sensor image | `podman build -t campus-sensor:1.0 endpoints/sensor` | Builds; container publishes to Mosquitto |

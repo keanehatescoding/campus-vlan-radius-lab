@@ -1,0 +1,46 @@
+# Server segment for the campus lab.
+#
+# Networking model:
+#   The containers sit on a macvlan network whose parent is srv-mac.
+#   srv-mac is one end of a veth pair; the peer (srv-br) is attached to the
+#   Linux bridge br-srv. In GNS3, attach a Cloud node to br-srv and connect
+#   R1 g0/1 to that Cloud. R1 is 192.168.50.1 and is the containers' gateway.
+#
+# Run radius/setup-server-bridge.sh once before `docker compose up -d`.
+#
+# The images deliberately have no host port publishing: the GNS3 Cloud link is
+# the only path into the segment. Use `docker exec` for local diagnostics.
+
+name: campus-network
+
+services:
+  radius:
+    image: freeradius/freeradius-server:3.2.3
+    container_name: radius
+    restart: unless-stopped
+    volumes:
+      - ./clients.conf:/etc/freeradius/clients.conf:ro
+      - ./users:/etc/freeradius/mods-config/files/authorize:ro
+    networks:
+      server:
+        ipv4_address: 192.168.50.10
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: mqtt
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    networks:
+      server:
+        ipv4_address: 192.168.50.20
+
+networks:
+  server:
+    driver: macvlan
+    driver_opts:
+      parent: ${SERVER_MACVLAN_PARENT:-srv-mac}
+    ipam:
+      config:
+        - subnet: 192.168.50.0/24
+          gateway: 192.168.50.1

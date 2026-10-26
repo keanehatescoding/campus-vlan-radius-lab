@@ -154,11 +154,14 @@ the server segment and avoids putting a Docker bridge IP on 192.168.50.1.
 | Source VLAN | Allowed | Denied |
 |---|---|---|
 | STAFF (10) | Everything: Internet, SERVER, STUDENT, IOT, MGMT | none |
-| STUDENT (20) | DHCP, gateway echo, Internet DNS/HTTP/HTTPS | all RFC1918 (STAFF, IOT, MGMT, SERVER, other students) |
+| STUDENT (20) | DHCP, gateway echo, Internet DNS/HTTP/HTTPS | all RFC1918 reached through R1 (STAFF, IOT, MGMT, SERVER) |
 | GUEST (30) | DHCP, gateway echo, Internet DNS/HTTP/HTTPS | all RFC1918 |
 | IOT (40) | DHCP, DNS to 8.8.8.8, MQTT tcp/1883 to 192.168.50.20 | Internet, all other internal ranges |
-| MGMT (99) | RADIUS udp/1812,1813 to 192.168.50.10, return traffic | everything else |
+| MGMT (99) | RADIUS udp/1812,1813 to 192.168.50.10 (replies are routed out, not filtered) | everything else |
 
 The ACLs are named extended ACLs on R1: `STAFF_IN`, `STUDENT_IN`, `GUEST_IN`,
 `IOT_IN`, `MGMT_IN`, each applied inbound on its VLAN subinterface and ending
-with `deny ip any any log`.
+with `deny ip any any log`. They filter only traffic that is routed through
+R1; two hosts in the same VLAN exchange frames through the access switch and
+do not hit these ACLs. Add private VLANs or `switchport protected` if
+same-VLAN peer isolation is required.

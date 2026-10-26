@@ -149,7 +149,8 @@ ACL explain:
 
 Also discuss what a production design would add: stateful zone firewall,
 default-deny on the server segment, RADIUS CoA, DHCP snooping/DAI, port
-security, and logging to a collector.
+security, private VLAN/port isolation for same-VLAN peers, and logging to a
+collector.
 
 **Screenshots/evidence:**
 
