@@ -1,0 +1,9 @@
+campus/iot/humidity-01 {"id":"humidity-01","type":"humidity","value":36.03,"timestamp":"2026-10-27T08:33:42.994347Z"}
+campus/iot/temp-01 {"id":"temp-01","type":"temperature","value":20.85,"timestamp":"2026-10-27T08:33:45.496554Z"}
+campus/iot/motion-01 {"id":"motion-01","type":"motion","value":0,"timestamp":"2026-10-27T08:33:46.741024Z"}
+campus/iot/humidity-01 {"id":"humidity-01","type":"humidity","value":60.21,"timestamp":"2026-10-27T08:33:48.001429Z"}
+campus/iot/temp-01 {"id":"temp-01","type":"temperature","value":18.18,"timestamp":"2026-10-27T08:33:50.503116Z"}
+campus/iot/motion-01 {"id":"motion-01","type":"motion","value":0,"timestamp":"2026-10-27T08:33:51.746192Z"}
+campus/iot/humidity-01 {"id":"humidity-01","type":"humidity","value":49.4,"timestamp":"2026-10-27T08:33:53.006298Z"}
+campus/iot/temp-01 {"id":"temp-01","type":"temperature","value":22.61,"timestamp":"2026-10-27T08:33:55.508872Z"}
+campus/iot/motion-01 {"id":"motion-01","type":"motion","value":0,"timestamp":"2026-10-27T08:33:56.753220Z"}

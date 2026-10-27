@@ -20,12 +20,18 @@ implemented in `configs/` and `radius/`.
                  /                          \               MQTT   192.168.50.20
             [SW2  Access]                [SW3  Access]      (Docker compose,
             /     |      \                |     |    \      reached via GNS3
-       g0/1   g0/2   g0/3  g0/4-6       g0/1  g0/2-4       Cloud on br-srv)
-        |      |      |     |             |      |
+       Gi0/1  Gi0/2  Gi0/3  Gi1/0-2    Gi0/1  Gi0/2-3     Cloud on br-srv)
+        |      |      |     |             |      |    \
    STAFF-PC1 PC2  PC3  STUDENT-PC1..3  GUEST  SENSOR-TEMP
                                                   SENSOR-MOTION
                                                   SENSOR-HUMIDITY
 ```
+
+> IOSvL2 exposes eight switch ports as `Gi0/0`-`Gi0/3` plus `Gi1/0`-`Gi1/3`;
+> there are no `Gi0/4`-`Gi0/6` ports on this image. The fifth to seventh
+> endpoint links therefore land on the second port group (SW2 students on
+> `Gi1/0`-`Gi1/2`, SW3 humidity on `Gi1/0`). GNS3 adapter 0-3 maps to
+> `Gi0/0`-`Gi0/3` and adapter 4-7 maps to `Gi1/0`-`Gi1/3`.
 
 VLANs are carried as 802.1Q tags on all inter-switch and R1-SW1 links:
 `10,20,30,40,99`. The server segment is a separate routed subnet; it is not a
@@ -39,13 +45,13 @@ VLAN on the switch trunk.
 | R2 | Cisco IOSv | Simulated ISP / Internet | Loopback0 = 8.8.8.8/32 |
 | SW1 | Cisco IOSvL2 | Distribution, rapid-PVST root | 3 trunk ports, no access ports |
 | SW2 | Cisco IOSvL2 | STAFF + STUDENT access | 802.1X authenticator |
-| SW3 | Cisco IOSvL2 | GUEST + IoT access | 802.1X + MAB authenticator |
+| SW3 | Cisco IOSvL2 | GUEST + IoT access | 802.1X authenticator; IoT ports use port security (see note below) |
 | STAFF-PC1..3 | Docker `campus-client:1.0` | Staff endpoints | wpa_supplicant, EAP-MD5 |
 | STUDENT-PC1..3 | Docker `campus-client:1.0` | Student endpoints | wpa_supplicant, EAP-MD5 |
 | GUEST-PC1 | Docker `campus-client:1.0` | Guest endpoint | wpa_supplicant, EAP-MD5 |
-| SENSOR-TEMP | Docker `campus-sensor:1.0` | Temperature sensor | MAB, MAC 0200.0000.4001 |
-| SENSOR-MOTION | Docker `campus-sensor:1.0` | Motion sensor | MAB, MAC 0200.0000.4002 |
-| SENSOR-HUMIDITY | Docker `campus-sensor:1.0` | Humidity sensor | MAB, MAC 0200.0000.4003 |
+| SENSOR-TEMP | Docker `campus-sensor:1.0` | Temperature sensor | VLAN 40, MAC 0200.0000.4001 |
+| SENSOR-MOTION | Docker `campus-sensor:1.0` | Motion sensor | VLAN 40, MAC 0200.0000.4002 |
+| SENSOR-HUMIDITY | Docker `campus-sensor:1.0` | Humidity sensor | VLAN 40, MAC 0200.0000.4003 |
 | SERVER-CLOUD | GNS3 Cloud | Link to `br-srv` | R1 g0/1 attaches here |
 | RADIUS | Docker compose | FreeRADIUS 3.2.3 | 192.168.50.10 |
 | MQTT | Docker compose | Eclipse Mosquitto 2.x | 192.168.50.20 |
@@ -64,13 +70,13 @@ and `radius/setup-server-bridge.sh`.
 | SW2 staff 1 | SW2 g0/1 | Access VLAN 10, 802.1X | STAFF-PC1 |
 | SW2 staff 2 | SW2 g0/2 | Access VLAN 10, 802.1X | STAFF-PC2 |
 | SW2 staff 3 | SW2 g0/3 | Access VLAN 10, 802.1X | STAFF-PC3 |
-| SW2 student 1 | SW2 g0/4 | Access VLAN 20, 802.1X | STUDENT-PC1 |
-| SW2 student 2 | SW2 g0/5 | Access VLAN 20, 802.1X | STUDENT-PC2 |
-| SW2 student 3 | SW2 g0/6 | Access VLAN 20, 802.1X | STUDENT-PC3 |
-| SW3 guest | SW3 g0/1 | Access VLAN 30, 802.1X | GUEST-PC1 |
-| SW3 IoT temp | SW3 g0/2 | Access VLAN 40, MAB | SENSOR-TEMP |
-| SW3 IoT motion | SW3 g0/3 | Access VLAN 40, MAB | SENSOR-MOTION |
-| SW3 IoT humidity | SW3 g0/4 | Access VLAN 40, MAB | SENSOR-HUMIDITY |
+| SW2 student 1 | SW2 Gi1/0 | Access VLAN 20, 802.1X | STUDENT-PC1 |
+| SW2 student 2 | SW2 Gi1/1 | Access VLAN 20, 802.1X | STUDENT-PC2 |
+| SW2 student 3 | SW2 Gi1/2 | Access VLAN 20, 802.1X | STUDENT-PC3 |
+| SW3 guest | SW3 Gi0/1 | Access VLAN 30, 802.1X | GUEST-PC1 |
+| SW3 IoT temp | SW3 Gi0/2 | Access VLAN 40, port security | SENSOR-TEMP |
+| SW3 IoT motion | SW3 Gi0/3 | Access VLAN 40, port security | SENSOR-MOTION |
+| SW3 IoT humidity | SW3 Gi1/0 | Access VLAN 40, port security | SENSOR-HUMIDITY |
 | R1 <-> server | R1 g0/1 <-> SERVER-CLOUD (`br-srv`) | Routed 192.168.50.0/24 | RADIUS + MQTT |
 | R1 <-> R2 | R1 g0/2 <-> R2 g0/0 | Routed 10.0.0.0/30 | Simulated ISP |
 
@@ -79,8 +85,16 @@ On SW2 and SW3 the initial `switchport access vlan` is the "pre-auth" VLAN:
 successful RADIUS exchange the switch moves the port to the VLAN returned in
 `Tunnel-Private-Group-Id` (normally the same VLAN, which makes the assignment
 visible in `show authentication sessions`). A failed/no-response 802.1X user
-port is authorized into VLAN 30 (guest fallback). IoT MAB failures stay
-unauthorized by design.
+port is authorized into VLAN 30 (guest fallback).
+
+IoT ports are configured with port security instead of MAB: IOSvL2 accepts the
+`mab` command but never creates an authentication session, so a MAB port stays
+permanently unauthorized. Each sensor port pins the sensor MAC
+(`switchport port-security mac-address 0200.0000.40xx`) with a maximum of one
+address and `violation restrict`, which keeps unknown devices off VLAN 40. The
+RADIUS server is still configured for MAB identities, so the same `users` file
+works when the configs are pasted onto Catalyst hardware; see the note in
+`configs/SW3.cfg` for the four lines to swap back.
 
 ## 4. Addressing
 
@@ -116,8 +130,8 @@ DHCP is served by R1 on the VLAN 10/20/30/40 subinterfaces. Each pool excludes
 | Motion | 0200.0000.4002 | 0200.0000.4002 | 40 |
 | Humidity | 0200.0000.4003 | 0200.0000.4003 | 40 |
 
-These MACs must be set on the GNS3 Docker nodes (or via `SENSOR_MAC`) so MAB
-matches `radius/users`. `radius/users` includes dotted, plain, hyphen and colon
+These MACs must be set on the GNS3 Docker nodes (or via `SENSOR_MAC`) so the
+switch port-security entry and the RADIUS MAB identity both match. `radius/users` includes dotted, plain, hyphen and colon
 aliases; if the switch sends a format not listed there, add one alias as
 described in the README.
 
@@ -157,7 +171,7 @@ the server segment and avoids putting a Docker bridge IP on 192.168.50.1.
 | STUDENT (20) | DHCP, gateway echo, Internet DNS/HTTP/HTTPS | all RFC1918 reached through R1 (STAFF, IOT, MGMT, SERVER) |
 | GUEST (30) | DHCP, gateway echo, Internet DNS/HTTP/HTTPS | all RFC1918 |
 | IOT (40) | DHCP, DNS to 8.8.8.8, MQTT tcp/1883 to 192.168.50.20 | Internet, all other internal ranges |
-| MGMT (99) | RADIUS udp/1812,1813 to 192.168.50.10 (replies are routed out, not filtered) | everything else |
+| MGMT (99) | RADIUS udp/1812,1813 to 192.168.50.10; echo replies and established TCP for sessions opened by STAFF | everything else (switches cannot initiate outbound traffic) |
 
 The ACLs are named extended ACLs on R1: `STAFF_IN`, `STUDENT_IN`, `GUEST_IN`,
 `IOT_IN`, `MGMT_IN`, each applied inbound on its VLAN subinterface and ending

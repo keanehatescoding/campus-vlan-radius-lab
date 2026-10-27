@@ -50,7 +50,7 @@ where it applies.
 **Steps:**
 
 1. Confirm the GNS3 project contains R1, R2, SW1, SW2, SW3, seven client
-   containers, three sensor containers, SERVER-CLOUD.
+   containers, three sensor containers, SERVER-CLOUD (16 nodes).
 2. Confirm the 15 links in `topology/gns3-build-steps.md` section 5.
 3. On R1 and each switch: `show cdp neighbors` (or `show lldp neighbors` if
    CDP is disabled).
@@ -82,12 +82,15 @@ show vlan id 99
 | Switch | VLAN 10 ports | VLAN 20 ports | VLAN 30 ports | VLAN 40 ports |
 |---|---|---|---|---|
 | SW1 | none (trunks only) | none | none | none |
-| SW2 | g0/1, g0/2, g0/3 | g0/4, g0/5, g0/6 | none | none |
-| SW3 | none | none | g0/1 | g0/2, g0/3, g0/4 |
+| SW2 | Gi0/1, Gi0/2, Gi0/3 | Gi1/0, Gi1/1, Gi1/2 | none | none |
+| SW3 | none | none | Gi0/1 | Gi0/2, Gi0/3, Gi1/0 |
 
 All five VLANs exist and have the names STAFF, STUDENT, GUEST, IOT, MGMT on
 every switch. VLAN 99 has the management SVI.
 
+> IOSvL2 has no `Gi0/4`-`Gi0/6`; student links 4-6 and the humidity sensor are
+> on the `Gi1/x` port group. GNS3 adapter 4 maps to `Gi1/0`.
+>
 > After 802.1X succeeds, a port may be shown in the RADIUS-assigned VLAN
 > instead of its initial access VLAN. Both should be the same VLAN in this
 > design; T05/T06/T07 prove the assignment.
@@ -182,12 +185,12 @@ running; SW2 g0/1 is connected.
 
 ### T06 - student1 -> VLAN 20; guest1 -> VLAN 30
 
-**Where:** STUDENT-PC1, GUEST-PC1, SW2 g0/4, SW3 g0/1.
+**Where:** STUDENT-PC1, GUEST-PC1, SW2 Gi1/0, SW3 Gi0/1.
 
 **Steps:**
 
 1. Reconnect STUDENT-PC1 with `wpa_supplicant-student1.conf`.
-2. On SW2: `show authentication sessions interface GigabitEthernet0/4 details`.
+2. On SW2: `show authentication sessions interface GigabitEthernet1/0 details`.
 3. Reconnect GUEST-PC1 with `wpa_supplicant-guest1.conf`.
 4. On SW3: `show authentication sessions interface GigabitEthernet0/1 details`.
 
@@ -197,11 +200,17 @@ Access-Accept for each contains the matching `Tunnel-Private-Group-Id`.
 
 **Evidence:** Two session outputs, two DHCP addresses, RADIUS debug excerpts.
 
-### T07 - Sensor MAB -> VLAN 40
+### T07 - Sensor access -> VLAN 40
 
-**Where:** SW3 g0/2, g0/3, g0/4; RADIUS logs.
+**Where:** SW3 Gi0/2, Gi0/3, Gi1/0; RADIUS logs.
 
-**Steps:**
+> **Platform note:** IOSvL2 accepts the `mab` command but never creates an
+> authentication session, so a MAB-configured port stays unauthorized and the
+> sensor cannot DHCP. The shipped `configs/SW3.cfg` pins each sensor MAC with
+> port security instead. Both variants are checked below; on Catalyst hardware
+> run the MAB variant, on IOSvL2 run the port-security variant.
+
+**Steps (IOSvL2 / shipped config):**
 
 1. Confirm each sensor's MAC:
 
@@ -213,21 +222,32 @@ Access-Accept for each contains the matching `Tunnel-Private-Group-Id`.
 2. On SW3:
 
    ```text
-   show authentication sessions interface GigabitEthernet0/2 details
-   show authentication sessions interface GigabitEthernet0/3 details
-   show authentication sessions interface GigabitEthernet0/4 details
+   show port-security
+   show port-security interface GigabitEthernet0/2
+   show mac address-table | include 0200.0000.40
    ```
 
-3. In the RADIUS debug output, find the Access-Request for the sensor MAC.
+3. Confirm the sensors have 192.168.40.x leases (`ip addr show eth0` in each
+   container) and publish to the broker (T16).
 
-**Expected:** Each IoT port is authorized with method `mab`, VLAN 40, and the
-sensor has a 192.168.40.x lease. RADIUS sees User-Name `0200.0000.4001`,
-`0200.0000.4002`, `0200.0000.4003` respectively, or one of the common-format
-aliases in `radius/users`. Each Access-Accept contains
-`Tunnel-Private-Group-Id = "40"`.
+**Expected:** Each IoT port is `Secure-up`, maximum 1 address, `Restrict`,
+with `Last Source Address:Vlan` equal to the sensor MAC in VLAN 40. The MAC
+table shows the three addresses as `STATIC` in VLAN 40. Each sensor has a
+192.168.40.x lease.
 
-**Evidence:** Three session outputs, three MAC/lease outputs, RADIUS
-Access-Accept excerpt.
+**Steps (hardware MAB variant):**
+
+1. Replace the port-security lines on each IoT port with
+   `authentication order mab`, `authentication port-control auto`, `mab` and
+   `dot1x pae authenticator`.
+2. `show authentication sessions interface GigabitEthernet0/2 details` shows
+   method `mab`, status `Auth`, VLAN 40.
+3. In RADIUS debug, the Access-Request User-Name is `0200.0000.4001`
+   (or one of the aliases in `radius/users`), and the Access-Accept contains
+   `Tunnel-Private-Group-Id = "40"`.
+
+**Evidence:** `report/evidence/T06-T07-sw3-sessions.txt` (port security,
+sessions, MAC table), sensor leases, and `T16-mqtt-subscribe.txt`.
 
 ### T08 - Moving staff1 to another port keeps VLAN 10
 
@@ -420,6 +440,11 @@ shows requests/responses. Pings to 8.8.8.8, 192.168.50.20 and 192.168.10.21
 fail (packets from VLAN 99 are denied by `MGMT_IN`). RADIUS still works because
 UDP 1812/1813 to 192.168.50.10 is explicitly permitted.
 
+> `MGMT_IN` also permits ICMP echo replies and established TCP so that staff
+> (which `STAFF_IN` allows to reach MGMT) can ping or SSH to the switch SVIs.
+> Switch-originated echo requests and TCP SYNs do not match those entries and
+> are still denied, which is what this test checks.
+>
 > If `test aaa` is unsupported on your IOSvL2 image, the live 802.1X tests
 > (T05-T09) already prove MGMT-to-RADIUS reachability; capture
 > `show radius statistics` instead.

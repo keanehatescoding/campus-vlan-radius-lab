@@ -9,13 +9,15 @@ A complete, paste-ready GNS3 lab for:
 - **GUEST VLAN** with 1 Docker client
 - **IOT VLAN** with 3 real Docker sensors publishing MQTT
 - **Firewall policy** as five named extended ACLs on R1
-- **RADIUS dynamic VLAN** using FreeRADIUS, 802.1X for users and MAB for sensors
+- **RADIUS dynamic VLAN** using FreeRADIUS and 802.1X for users (MAB-ready
+  RADIUS entries for sensors)
 - **MQTT broker** and a server segment isolated behind R1
 
-The repo is designed so the human only has to supply the Cisco images, build
-the GNS3 topology, paste the configs and run the tests. Claude Code did not run
-GNS3 or a Cisco image; see [Offline validation performed](#offline-validation-performed)
-for exactly what was and was not verified.
+The lab was built and run end to end in GNS3 3.1 with IOSv/IOSvL2 images:
+802.1X dynamic VLAN assignment, DHCP, MQTT, the ACL matrices and NAT were
+exercised and the captured output is in `report/evidence/`. See
+[Live validation performed](#live-validation-performed-gns3-31-iosviiosvl2)
+for the results and the one platform gap (MAB on IOSvL2).
 
 ## What you must supply
 
@@ -131,7 +133,7 @@ Use [tests/test-plan.md](tests/test-plan.md). The minimum evidence set is in
 | Staff | VLAN 10, 192.168.10.0/24, 802.1X, 3 clients |
 | Student | VLAN 20, 192.168.20.0/24, 802.1X, 3 clients |
 | Guest | VLAN 30, 192.168.30.0/24, 802.1X + fallback, 1 client |
-| IoT | VLAN 40, 192.168.40.0/24, MAB, 3 sensors |
+| IoT | VLAN 40, 192.168.40.0/24, port security (MAB on hardware), 3 sensors |
 | MGMT | VLAN 99, 192.168.99.0/24, SW1 .11/SW2 .12/SW3 .13 |
 | Server segment | 192.168.50.0/24, RADIUS .10, MQTT .20, R1 .1 |
 | R1-R2 | 10.0.0.0/30, R1 .1, R2 .2 |
@@ -139,7 +141,7 @@ Use [tests/test-plan.md](tests/test-plan.md). The minimum evidence set is in
 | DHCP | R1 pools for 10/20/30/40, leases from .21 |
 | NAT | PAT of 10/20/30/40 out R1 g0/2; server and MGMT not translated |
 | Firewall | `STAFF_IN`, `STUDENT_IN`, `GUEST_IN`, `IOT_IN`, `MGMT_IN`, inbound on R1 subinterfaces |
-| RADIUS | FreeRADIUS 3.2.3, EAP-MD5 for users, MAB for sensors, named group `CAMPUS-RADIUS`, dynamic VLAN via Tunnel-* attributes |
+| RADIUS | FreeRADIUS 3.2.3, EAP-MD5 for users, named group `CAMPUS-RADIUS`, dynamic VLAN via Tunnel-* attributes; MAB identities present for hardware use |
 
 ## Secrets and consistency
 
@@ -174,6 +176,35 @@ For PEAP/MSCHAPv2 or EAP-TLS, add a CA/server certificate, set `eap=PEAP` and
 the FreeRADIUS `eap` module. EAP-MD5 is deprecated for production Wi-Fi but is
 appropriate for this wired lab.
 
+## Live validation performed (GNS3 3.1, IOSv/IOSvL2)
+
+The project `campus-network` was built in GNS3 3.1 with 16 nodes and 15 links
+and run on a local server. Every device and endpoint was started from the
+saved project. Highlights:
+
+| Area | What was observed | Result |
+|---|---|---|
+| Topology | 3 switches, 2 routers, 7 clients, 3 sensors, Cloud; CDP shows R1-SW1, R1-R2, SW1-SW2, SW1-SW3 | Pass |
+| Trunks | SW1 `Gi0/0-2` trunking, allowed `10,20,30,40,99`; SW2/SW3 `Gi0/0` the same | Pass |
+| DHCP | R1 bindings: staff `.10.21-.23`, student `.20.21-.23`, guest `.30.21`, sensors `.40.21-.23` | Pass |
+| 802.1X | staff1 on SW2 `Gi0/1` -> VLAN 10; student1 on `Gi1/0` -> VLAN 20; guest1 on SW3 `Gi0/1` -> VLAN 30; `test aaa group CAMPUS-RADIUS` succeeds; RADIUS logs 13 auth responses | Pass |
+| IoT access | IOSvL2 MAB does not work (see limitations); port security with the fixed sensor MACs authorises the three sensors in VLAN 40 | Pass (design adapted) |
+| MQTT | `mosquitto_sub -t 'campus/iot/#'` received JSON from `temp-01`, `motion-01`, `humidity-01` | Pass |
+| ACLs | T11 staff all pass; T12/T13 student/guest Internet HTTP 401 and all RFC1918 pings blocked; T14 IoT MQTT `nc` succeeds, Internet/internal pings blocked; deny counters on all four restricted ACLs | Pass |
+| NAT | `show ip nat translations` shows staff ICMP and student/guest TCP translated to 10.0.0.1; NAT statistics 18 active, 0 for IoT | Pass |
+| STP | SW1 root for VLANs 1,10,20,30,40,99; rapid-pvst; no blocking ports | Pass |
+
+Evidence files: `report/evidence/T01-T20-r1.txt`, `T02-T03-T19-sw1.txt`,
+`T02-T19-sw2.txt`, `T02-T19-sw3.txt`, `T05-T15-sw2-sessions.txt`,
+`T06-T07-sw3-sessions.txt`, `T11`-`T14` matrices, `T16-mqtt-subscribe.txt`,
+`T17-T18-r1-acl-nat.txt`, `T18-nat-live.txt`.
+
+**Not exercised live:** T08 (moving staff1 to another port), T09 (wrong
+password fallback), T10 (RADIUS no-response fallback) and the optional reload
+in T20. Their configuration is present and covered by the offline checks, but
+they need a maintenance window on the running lab. T19 is covered by the
+summary output rather than per-VLAN detail.
+
 ## Offline validation performed
 
 These checks were run in the build environment and do not require GNS3. The
@@ -207,12 +238,18 @@ that change.
 
 ## Known limitations
 
-- **IOSvL2 802.1X is image-dependent.** Some IOSvL2 builds reject
-  `authentication`/`dot1x` commands or behave inconsistently with EAPOL. If
-  that happens, fall back to MAB-only for the dynamic VLAN demonstration: use
-  `mab` on the user ports, add the client MACs to `radius/users` with VLAN 10
-  or 20, and state in the report that EAP was not exercised. The VLAN, ACL,
-  DHCP and RADIUS attribute design still works.
+- **MAB does not work on IOSvL2.** The image accepts `mab`, `authentication
+  order mab` and `dot1x pae authenticator`, and the sensor frames reach the
+  switch port, but no authentication session is ever created and the port
+  stays unauthorized. This is a known IOSvL2 limitation, not a RADIUS problem:
+  `radtest` with `0200.0000.4001` returns Access-Accept VLAN 40. The shipped
+  `SW3.cfg` therefore uses `switchport port-security` with one pinned MAC per
+  sensor (`violation restrict`); `configs/SW3.cfg` documents the four lines to
+  swap back on Catalyst hardware. On real hardware MAB would authenticate the
+  same three MACs against the same `radius/users` entries.
+- **802.1X is still image-dependent.** If a different IOSvL2 build rejects the
+  `authentication`/`dot1x` commands, do not invent replacement syntax; use the
+  same port-security fallback and state the limitation in the report.
 - **Packet Tracer cannot do this part.** Use GNS3 or EVE-NG.
 - **The simulated Internet has no DNS or HTTPS service.** R2 answers ICMP and
   HTTP on 8.8.8.8. DNS and HTTPS tests prove the ACL permits via counters, not
@@ -245,9 +282,10 @@ that change.
 | `br-srv` missing in GNS3 Cloud | GNS3 server host / VM | Run the setup script on the GNS3 server host; restart the GNS3 server |
 | RADIUS container exits | `docker logs radius` | Validate config with `freeradius -CX`; check mounts |
 | Switch cannot ping 192.168.50.10 | SW SVI, VLAN 99 trunk, R1 `MGMT_IN` counters | `show ip interface brief`; `show interfaces trunk`; `show access-lists` |
+| `mab` configured but no session | IOSvL2 MAB is non-functional | Use port security; see the note in `configs/SW3.cfg` |
 | Client gets no DHCP | `show authentication sessions`, `show dot1x all` | Confirm EAP success/fallback; `docker exec ... cat /tmp/wpa_supplicant.log` |
 | Client authenticated in wrong VLAN | RADIUS debug Tunnel-Private-Group-Id | Check the `users` entry and `aaa authorization network default group CAMPUS-RADIUS` |
-| Sensor not authorized | MAC mismatch/format | Set the GNS3 MAC or `SENSOR_MAC`; inspect `radiusd -X` User-Name |
+| Sensor not authorized | MAC differs from the port-security entry | `show port-security interface Gi0/2`; set the GNS3 MAC or `SENSOR_MAC` |
 | MQTT no messages | Sensor DHCP, IOT_IN 1883 permit, broker | `docker logs <sensor>`; `show access-lists`; `docker exec mqtt mosquitto_sub ...` |
 | Trunk not forwarding VLAN | `show interfaces trunk` allowed list | Repaste the trunk block; check both ends |
 

@@ -1,0 +1,84 @@
+# STAFF-PC1 connectivity matrix (2026-10-27T08:32:32Z)
+
+### STAFF-PC1 :: staff->internet ICMP
+$ ping -c 3 -W 2 8.8.8.8
+PING 8.8.8.8 (8.8.8.8): 56 data bytes
+64 bytes from 8.8.8.8: seq=0 ttl=254 time=5.483 ms
+64 bytes from 8.8.8.8: seq=1 ttl=254 time=8.078 ms
+64 bytes from 8.8.8.8: seq=2 ttl=254 time=7.994 ms
+
+--- 8.8.8.8 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 5.483/7.185/8.078 ms
+
+### STAFF-PC1 :: staff->internet HTTP
+$ curl -sS -m 6 -o /dev/null -w 'http_code=%{http_code}
+' http://8.8.8.8/ || echo curl_failed
+http_code=401
+
+### STAFF-PC1 :: staff->radius
+$ ping -c 3 -W 2 192.168.50.10
+PING 192.168.50.10 (192.168.50.10): 56 data bytes
+64 bytes from 192.168.50.10: seq=0 ttl=63 time=4.219 ms
+64 bytes from 192.168.50.10: seq=1 ttl=63 time=6.561 ms
+64 bytes from 192.168.50.10: seq=2 ttl=63 time=6.603 ms
+
+--- 192.168.50.10 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 4.219/5.794/6.603 ms
+
+### STAFF-PC1 :: staff->mqtt
+$ ping -c 3 -W 2 192.168.50.20
+PING 192.168.50.20 (192.168.50.20): 56 data bytes
+64 bytes from 192.168.50.20: seq=0 ttl=63 time=4.472 ms
+64 bytes from 192.168.50.20: seq=1 ttl=63 time=6.359 ms
+64 bytes from 192.168.50.20: seq=2 ttl=63 time=5.287 ms
+
+--- 192.168.50.20 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 4.472/5.372/6.359 ms
+
+### STAFF-PC1 :: staff->student
+$ ping -c 3 -W 2 192.168.20.21
+PING 192.168.20.21 (192.168.20.21): 56 data bytes
+64 bytes from 192.168.20.21: seq=0 ttl=63 time=10.248 ms
+64 bytes from 192.168.20.21: seq=1 ttl=63 time=7.830 ms
+64 bytes from 192.168.20.21: seq=2 ttl=63 time=10.272 ms
+
+--- 192.168.20.21 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 7.830/9.450/10.272 ms
+
+### STAFF-PC1 :: staff->iot
+$ ping -c 3 -W 2 192.168.40.21
+PING 192.168.40.21 (192.168.40.21): 56 data bytes
+64 bytes from 192.168.40.21: seq=0 ttl=63 time=8.147 ms
+64 bytes from 192.168.40.21: seq=1 ttl=63 time=10.784 ms
+64 bytes from 192.168.40.21: seq=2 ttl=63 time=10.651 ms
+
+--- 192.168.40.21 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 8.147/9.860/10.784 ms
+
+### STAFF-PC1 :: staff->sw1 mgmt
+$ ping -c 3 -W 2 192.168.99.11
+PING 192.168.99.11 (192.168.99.11): 56 data bytes
+64 bytes from 192.168.99.11: seq=0 ttl=254 time=5.112 ms
+64 bytes from 192.168.99.11: seq=1 ttl=254 time=7.887 ms
+64 bytes from 192.168.99.11: seq=2 ttl=254 time=7.929 ms
+
+--- 192.168.99.11 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 5.112/6.976/7.929 ms
+
+### STAFF-PC1 :: staff->guest
+$ ping -c 3 -W 2 192.168.30.21
+PING 192.168.30.21 (192.168.30.21): 56 data bytes
+64 bytes from 192.168.30.21: seq=0 ttl=63 time=7.020 ms
+64 bytes from 192.168.30.21: seq=1 ttl=63 time=10.260 ms
+64 bytes from 192.168.30.21: seq=2 ttl=63 time=10.627 ms
+
+--- 192.168.30.21 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 7.020/9.302/10.627 ms
+

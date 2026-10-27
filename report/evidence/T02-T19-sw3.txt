@@ -1,0 +1,42 @@
+show vlan brief
+
+VLAN Name                             Status    Ports
+---- -------------------------------- --------- -------------------------------
+1    default                          active    Gi1/1, Gi1/2, Gi1/3
+10   STAFF                            active    
+20   STUDENT                          active    
+30   GUEST                            active    Gi0/1
+40   IOT                              active    Gi0/2, Gi0/3, Gi1/0
+99   MGMT                             active    
+1002 fddi-default                     act/unsup 
+1003 token-ring-default               act/unsup 
+1004 fddinet-default                  act/unsup 
+1005 trnet-default                    act/unsup 
+SW3#
+SW3#show spanning-tree summary
+Switch is in rapid-pvst mode
+Root bridge for: VLAN0001
+Extended system ID                      is enabled
+Portfast Default                        is disabled
+Portfast Edge BPDU Guard Default        is disabled
+Portfast Edge BPDU Filter Default       is disabled
+Loopguard Default                       is disabled
+PVST Simulation Default                 is enabled but inactive in rapid-pvst mode
+Bridge Assurance                        is enabled
+EtherChannel misconfig guard            is enabled
+Configured Pathcost method used is short
+UplinkFast                              is disabled
+BackboneFast                            is disabled
+
+Name                   Blocking Listening Learning Forwarding STP Active
+---------------------- -------- --------- -------- ---------- ----------
+VLAN0001                     0         0        0          3          3
+VLAN0010                     0         0        0          1          1
+VLAN0020                     0         0        0          1          1
+VLAN0030                     0         0        0          2          2
+VLAN0040                     0         0        0          4          4
+VLAN0099                     0         0        0          1          1
+---------------------- -------- --------- -------- ---------- ----------
+6 vlans                      0         0        0         12         12
+SW3#
+SW3#

@@ -1,0 +1,48 @@
+# STUDENT-PC1 connectivity matrix (2026-10-27T08:28:48Z)
+
+### STUDENT-PC1 :: student->internet ICMP
+$ ping -c 3 -W 2 8.8.8.8
+PING 8.8.8.8 (8.8.8.8): 56 data bytes
+
+--- 8.8.8.8 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+
+### STUDENT-PC1 :: student->internet HTTP
+$ curl -sS -m 6 -o /dev/null -w 'http_code=%{http_code}\n' http://8.8.8.8/ || echo curl_failed
+http_code=401
+
+### STUDENT-PC1 :: student->staff
+$ ping -c 3 -W 2 192.168.10.21
+PING 192.168.10.21 (192.168.10.21): 56 data bytes
+
+--- 192.168.10.21 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+
+### STUDENT-PC1 :: student->iot
+$ ping -c 3 -W 2 192.168.40.21
+PING 192.168.40.21 (192.168.40.21): 56 data bytes
+
+--- 192.168.40.21 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+
+### STUDENT-PC1 :: student->sw1 mgmt
+$ ping -c 3 -W 2 192.168.99.11
+PING 192.168.99.11 (192.168.99.11): 56 data bytes
+
+--- 192.168.99.11 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+
+### STUDENT-PC1 :: student->radius
+$ ping -c 3 -W 2 192.168.50.10
+PING 192.168.50.10 (192.168.50.10): 56 data bytes
+
+--- 192.168.50.10 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+
+### STUDENT-PC1 :: student->mqtt
+$ ping -c 3 -W 2 192.168.50.20
+PING 192.168.50.20 (192.168.50.20): 56 data bytes
+
+--- 192.168.50.20 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+

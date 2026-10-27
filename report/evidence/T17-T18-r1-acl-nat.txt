@@ -1,0 +1,107 @@
+show access-lists
+Standard IP access list NAT_INSIDE
+    10 permit 192.168.10.0, wildcard bits 0.0.0.255 (4 matches)
+    20 permit 192.168.20.0, wildcard bits 0.0.0.255 (1 match)
+    30 permit 192.168.30.0, wildcard bits 0.0.0.255 (1 match)
+    40 permit 192.168.40.0, wildcard bits 0.0.0.255
+Extended IP access list GUEST_IN
+    10 permit udp any eq bootpc any eq bootps (2 matches)
+    20 permit icmp any host 192.168.30.1 echo
+    30 permit icmp any any echo-reply (6 matches)
+    40 deny ip any 192.168.0.0 0.0.255.255 (15 matches)
+    50 deny ip any 10.0.0.0 0.255.255.255
+    60 deny ip any 172.16.0.0 0.15.255.255
+    70 permit tcp any any established (4 matches)
+    80 permit udp any any eq domain
+    90 permit tcp any any eq domain
+    100 permit tcp any any eq www (1 match)
+    110 permit tcp any any eq 443
+    120 deny ip any any log (3 matches)
+Extended IP access list IOT_IN
+    10 permit udp any eq bootpc any eq bootps (6 matches)
+    20 permit udp any host 8.8.8.8 eq domain
+    30 permit tcp any host 8.8.8.8 eq domain
+    40 permit tcp any host 192.168.50.20 eq 1883 (605 matches)
+    50 permit icmp any any echo-reply (6 matches)
+    60 deny ip any 192.168.0.0 0.0.255.255 log (12 matches)
+    70 deny ip any 10.0.0.0 0.255.255.255 log
+    80 deny ip any 172.16.0.0 0.15.255.255 log
+    90 deny ip any any log (4 matches)
+Extended IP access list MGMT_IN
+    10 permit udp 192.168.99.0 0.0.0.255 host 192.168.50.10 eq 1812 (1 match)
+    20 permit udp 192.168.99.0 0.0.0.255 host 192.168.50.10 eq 1813
+    30 permit icmp 192.168.99.0 0.0.0.255 any echo-reply (6 matches)
+    40 permit tcp 192.168.99.0 0.0.0.255 any established
+    50 deny ip any any log (6 matches)
+Extended IP access list STAFF_IN
+    10 permit ip any any (58 matches)
+    20 deny ip any any log
+Extended IP access list STUDENT_IN
+    10 permit udp any eq bootpc any eq bootps (6 matches)
+    20 permit icmp any host 192.168.20.1 echo
+    30 permit icmp any any echo-reply (6 matches)
+    40 deny ip any 192.168.0.0 0.0.255.255 (15 matches)
+    50 deny ip any 10.0.0.0 0.255.255.255
+    60 deny ip any 172.16.0.0 0.15.255.255
+    70 permit tcp any any established (4 matches)
+    80 permit udp any any eq domain
+    90 permit tcp any any eq domain
+    100 permit tcp any any eq www (1 match)
+    110 permit tcp any any eq 443
+    120 deny ip any any log (3 matches)
+R1#
+R1#show ip nat translations
+R1#
+R1#show ip nat statistics
+Total active translations: 0 (0 static, 0 dynamic; 0 extended)
+Peak translations: 4, occurred 00:04:50 ago
+Outside interfaces:
+  GigabitEthernet0/2
+Inside interfaces: 
+  GigabitEthernet0/0.10, GigabitEthernet0/0.20, GigabitEthernet0/0.30
+  GigabitEthernet0/0.40
+Hits: 52  Misses: 0
+CEF Translated packets: 52, CEF Punted packets: 0
+Expired translations: 6
+Dynamic mappings:
+-- Inside Source
+[Id: 1] access-list NAT_INSIDE interface GigabitEthernet0/2 refcount 0
+
+Total doors: 0
+Appl doors: 0
+Normal doors: 0
+Queued Packets: 0
+R1#
+R1#show ip dhcp binding
+Bindings from all pools not associated with VRF:
+IP address          Client-ID/	 	    Lease expiration        Type
+		    Hardware address/
+		    User name
+192.168.10.21       0102.4204.042c.00       Oct 27 2026 04:14 PM    Automatic
+192.168.10.22       0102.4294.1923.00       Oct 27 2026 04:14 PM    Automatic
+192.168.10.23       0102.42b9.25c2.00       Oct 27 2026 04:14 PM    Automatic
+192.168.20.21       0102.4296.58c6.00       Oct 27 2026 12:14 PM    Automatic
+192.168.20.22       0102.4222.5730.00       Oct 27 2026 12:14 PM    Automatic
+192.168.20.23       0102.420e.8417.00       Oct 27 2026 12:14 PM    Automatic
+192.168.30.21       0102.4217.6817.00       Oct 27 2026 10:14 AM    Automatic
+192.168.40.21       0102.0000.0040.01       Oct 27 2026 09:26 AM    Automatic
+192.168.40.22       0102.0000.0040.02       Oct 27 2026 09:26 AM    Automatic
+192.168.40.23       0102.0000.0040.03       Oct 27 2026 09:26 AM    Automatic
+R1#
+R1#show logging | include ACL|denied|LIST
+*Oct 27 08:28:42.774: %SEC-6-IPACCESSLOGDP: list MGMT_IN denied icmp 192.168.99.11 -> 192.168.10.21 (0/0), 1 packet  
+*Oct 27 08:28:47.913: %SEC-6-IPACCESSLOGDP: list STUDENT_IN denied icmp 192.168.20.21 -> 8.8.8.8 (8/0), 1 packet  
+*Oct 27 08:29:12.420: %SEC-6-IPACCESSLOGDP: list GUEST_IN denied icmp 192.168.30.21 -> 8.8.8.8 (8/0), 1 packet  
+*Oct 27 08:29:36.919: %SEC-6-IPACCESSLOGDP: list IOT_IN denied icmp 192.168.40.21 -> 8.8.8.8 (8/0), 1 packet  
+*Oct 27 08:29:40.987: %SEC-6-IPACCESSLOGP: list IOT_IN denied tcp 192.168.40.21(49294) -> 8.8.8.8(80), 1 packet  
+*Oct 27 08:29:45.124: %SEC-6-IPACCESSLOGDP: list IOT_IN denied icmp 192.168.40.21 -> 192.168.10.21 (8/0), 1 packet  
+*Oct 27 08:29:49.191: %SEC-6-IPACCESSLOGDP: list IOT_IN denied icmp 192.168.40.21 -> 192.168.20.21 (8/0), 1 packet  
+*Oct 27 08:29:53.258: %SEC-6-IPACCESSLOGDP: list IOT_IN denied icmp 192.168.40.21 -> 192.168.40.1 (8/0), 1 packet  
+*Oct 27 08:31:09.743: %SEC-6-IPACCESSLOGDP: list MGMT_IN denied icmp 192.168.99.11 -> 192.168.99.1 (0/0), 1 packet  
+*Oct 27 08:31:49.008: %SEC-6-IPACCESSLOGDP: list MGMT_IN denied icmp 192.168.99.11 -> 192.168.10.21 (0/0), 1 packet  
+*Oct 27 08:31:49.008: %SEC-6-IPACCESSLOGDP: list MGMT_IN denied icmp 192.168.99.11 -> 192.168.99.1 (0/0), 2 packets  
+*Oct 27 08:33:14.721: %SEC-6-IPACCESSLOGDP: list MGMT_IN denied icmp 192.168.99.12 -> 8.8.8.8 (8/0), 1 packet  
+*Oct 27 08:33:17.576: %SEC-6-IPACCESSLOGDP: list MGMT_IN denied icmp 192.168.99.12 -> 192.168.10.21 (8/0), 1 packet  
+*Oct 27 08:34:05.047: %SEC-6-IPACCESSLOGDP: list STUDENT_IN denied icmp 192.168.20.21 -> 8.8.8.8 (8/0), 2 packets  
+R1#
+R1#

@@ -1,0 +1,142 @@
+show authentication sessions
+
+Interface    Identifier     Method  Domain  Status Fg Session ID
+Gi0/1        0242.0404.2c00 dot1x   DATA    Auth      C0A8630C00000010000E5F1A
+Gi0/2        0242.9419.2300 dot1x   DATA    Auth      C0A8630C00000011000E63B1
+Gi1/0        0242.9658.c600 dot1x   DATA    Auth      C0A8630C00000013000E6D4D
+Gi1/1        0242.2257.3000 dot1x   DATA    Auth      C0A8630C00000014000E720A
+Gi1/2        0242.0e84.1700 dot1x   DATA    Auth      C0A8630C00000015000E76EC
+Gi0/3        0242.b925.c200 dot1x   DATA    Auth      C0A8630C00000012000E688E
+
+Session count = 6
+
+Key to Session Events Blocked Status Flags:
+
+  A - Applying Policy (multi-line status for details)
+  D - Awaiting Deletion
+  F - Final Removal in progress
+  I - Awaiting IIF ID allocation
+  N - Waiting for AAA to come up
+  P - Pushed Session
+  R - Removing User Profile (multi-line status for details)
+  U - Applying User Profile (multi-line status for details)
+  X - Unknown Blocker
+SW2#
+SW2#show authentication sessions interface GigabitEthernet0/1 details
+            Interface:  GigabitEthernet0/1
+          MAC Address:  0242.0404.2c00
+         IPv6 Address:  Unknown
+         IPv4 Address:  192.168.10.21
+            User-Name:  staff1
+               Status:  Authorized
+               Domain:  DATA
+       Oper host mode:  single-host
+     Oper control dir:  both
+      Session timeout:  N/A
+      Restart timeout:  N/A
+Periodic Acct timeout:  N/A
+       Session Uptime:  1146s
+    Common Session ID:  C0A8630C00000010000E5F1A
+      Acct Session ID:  0x00000006
+               Handle:  0x24000001
+       Current Policy:  POLICY_Gi0/1
+
+Local Policies:
+	Service Template: DEFAULT_LINKSEC_POLICY_SHOULD_SECURE (priority 150)
+      Security Policy:  Should Secure
+      Security Status:  Link Unsecure
+
+Server Policies:
+           Vlan Group:  Vlan: 10
+
+Method status list: 
+      Method            State 
+
+      dot1x              Authc Success
+
+SW2#
+SW2#show authentication sessions interface GigabitEthernet1/0 details
+            Interface:  GigabitEthernet1/0
+          MAC Address:  0242.9658.c600
+         IPv6 Address:  Unknown
+         IPv4 Address:  192.168.20.21
+            User-Name:  student1
+               Status:  Authorized
+               Domain:  DATA
+       Oper host mode:  single-host
+     Oper control dir:  both
+      Session timeout:  N/A
+      Restart timeout:  N/A
+Periodic Acct timeout:  N/A
+       Session Uptime:  1144s
+    Common Session ID:  C0A8630C00000013000E6D4D
+      Acct Session ID:  0x00000009
+               Handle:  0xDB000004
+       Current Policy:  POLICY_Gi1/0
+
+Local Policies:
+	Service Template: DEFAULT_LINKSEC_POLICY_SHOULD_SECURE (priority 150)
+      Security Policy:  Should Secure
+      Security Status:  Link Unsecure
+
+Server Policies:
+           Vlan Group:  Vlan: 20
+
+Method status list: 
+      Method            State 
+
+      dot1x              Authc Success
+
+SW2#
+SW2#test aaa group CAMPUS-RADIUS staff1 Staff1Pass! legacy
+Attempting authentication test to server-group CAMPUS-RADIUS using radius
+User was successfully authenticated.
+
+SW2#
+SW2#show radius statistics
+                                  Auth.      Acct.       Both
+         Maximum inQ length:         NA         NA          2
+       Maximum waitQ length:         NA         NA          2
+       Maximum doneQ length:         NA         NA          0
+       Total responses seen:         13         10         23
+     Packets with responses:         13         10         23
+  Packets without responses:          0          0          0
+  Access Rejects           :          0
+ Average response delay(ms):          3          3          3
+ Maximum response delay(ms):          5          6          6
+  Number of Radius timeouts:          0          0          0
+       Duplicate ID detects:          0          0          0
+ Buffer Allocation Failures:          0          0          0
+Maximum Buffer Size (bytes):        294        269        294
+Malformed Responses        :          0          0          0
+Bad Authenticators         :          0          0          0
+Unknown Responses          :          0          0          0
+ Source Port Range: (2 ports only)
+ 1645 - 1646
+ Last used Source Port/Identifier:
+ 1645/13
+ 1646/10
+
+  Elapsed time since counters last cleared: 34m
+Radius Latency Distribution:
+<= 2ms :          1          2
+3-5ms  :         12          7
+5-10ms :          0          1
+10-20ms:          0          0
+20-50ms:          0          0
+50-100m:          0          0
+>100ms :          0          0
+
+Current inQ length  : 0
+Current doneQ length: 0
+
+SW2#
+SW2#ping 8.8.8.8 repeat 3
+Type escape sequence to abort.
+Sending 3, 100-byte ICMP Echos to 8.8.8.8, timeout is 2 seconds:
+U.U
+Success rate is 0 percent (0/3)
+SW2#ping 192.168.10.21 repeat 3
+Type escape sequence to abort.
+Sending 3, 100-byte ICMP Echos to 192.168.10.21, timeout is 2 seconds:
+U

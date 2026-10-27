@@ -1,0 +1,84 @@
+show authentication sessions
+
+Interface    Identifier     Method  Domain  Status Fg Session ID
+Gi0/1        0242.1768.1700 dot1x   DATA    Auth      C0A8630D0000000C000E6EEB
+
+Session count = 1
+
+Key to Session Events Blocked Status Flags:
+
+  A - Applying Policy (multi-line status for details)
+  D - Awaiting Deletion
+  F - Final Removal in progress
+  I - Awaiting IIF ID allocation
+  N - Waiting for AAA to come up
+  P - Pushed Session
+  R - Removing User Profile (multi-line status for details)
+  U - Applying User Profile (multi-line status for details)
+  X - Unknown Blocker
+SW3#
+SW3#show authentication sessions interface GigabitEthernet0/1 details
+            Interface:  GigabitEthernet0/1
+          MAC Address:  0242.1768.1700
+         IPv6 Address:  Unknown
+         IPv4 Address:  192.168.30.21
+            User-Name:  guest1
+               Status:  Authorized
+               Domain:  DATA
+       Oper host mode:  single-host
+     Oper control dir:  both
+      Session timeout:  N/A
+      Restart timeout:  N/A
+Periodic Acct timeout:  N/A
+       Session Uptime:  1166s
+    Common Session ID:  C0A8630D0000000C000E6EEB
+      Acct Session ID:  0x00000001
+               Handle:  0x87000001
+       Current Policy:  POLICY_Gi0/1
+
+Local Policies:
+	Service Template: DEFAULT_LINKSEC_POLICY_SHOULD_SECURE (priority 150)
+      Security Policy:  Should Secure
+      Security Status:  Link Unsecure
+
+Server Policies:
+           Vlan Group:  Vlan: 30
+
+Method status list: 
+      Method            State 
+
+      dot1x              Authc Success
+
+SW3#
+SW3#show port-security
+Secure Port  MaxSecureAddr  CurrentAddr  SecurityViolation  Security Action
+                (Count)       (Count)          (Count)
+---------------------------------------------------------------------------
+      Gi0/2              1            1                  0         Restrict
+      Gi0/3              1            1                  0         Restrict
+      Gi1/0              1            1                  0         Restrict
+---------------------------------------------------------------------------
+Total Addresses in System (excluding one mac per port)     : 0
+Max Addresses limit in System (excluding one mac per port) : 4096
+SW3#
+SW3#show port-security interface GigabitEthernet0/2
+Port Security              : Enabled
+Port Status                : Secure-up
+Violation Mode             : Restrict
+Aging Time                 : 0 mins
+Aging Type                 : Absolute
+SecureStatic Address Aging : Disabled
+Maximum MAC Addresses      : 1
+Total MAC Addresses        : 1
+Configured MAC Addresses   : 1
+Sticky MAC Addresses       : 0
+Last Source Address:Vlan   : 0200.0000.4001:40
+Security Violation Count   : 0
+
+SW3#
+SW3#show mac address-table | include 0200.0000.40
+  40    0200.0000.4001    STATIC      Gi0/2 
+  40    0200.0000.4002    STATIC      Gi0/3 
+  40    0200.0000.4003    STATIC      Gi1/0 
+SW3#
+SW3#

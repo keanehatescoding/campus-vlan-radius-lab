@@ -16,10 +16,11 @@ comply with Cisco's licence terms:
   GigabitEthernet interfaces, 802.1X capable). Import it as a QEMU IOSvL2
   template and mark it as an Ethernet switch.
 
-Do not rename the interfaces in the configs. The configs assume
-`GigabitEthernet0/0`, `0/1`, ... on both routers and switches. If your image
-numbers ports differently (for example `Gi1/0`), use search/replace in the
-configs before pasting, or adapt the port map.
+The configs use the port names of the IOSvL2 image that this lab was built
+and tested on: `GigabitEthernet0/0`-`0/3` and `GigabitEthernet1/0`-`1/3`.
+IOSvL2 has **no** `Gi0/4`-`Gi0/6`; the fifth to seventh access links land on
+`Gi1/0`-`Gi1/2`. GNS3 adapter 0-3 maps to `Gi0/0`-`Gi0/3`, adapter 4-7 maps to
+`Gi1/0`-`Gi1/3`. Router ports are `Gi0/0`-`Gi0/2` on IOSv.
 
 You also need:
 
@@ -79,8 +80,10 @@ at runtime with `WPA_CONF`; do not build a separate image per user.
    Set RAM to at least 512 MB. Set **Adapters** to **3** (R1 needs g0/0, g0/1,
    g0/2).
 3. Import your IOSvL2 image as template `IOSvL2`. Set RAM to at least 512 MB.
-   Set **Adapters** to at least **8** (SW2 uses g0/0 through g0/6). Mark the
-   template as an Ethernet switch if GNS3 offers that option.
+   Set **Adapters** to **5** (SW2 needs five switch ports: `Gi0/0`-`Gi0/3` for
+   the trunk and three staff PCs, plus `Gi1/0` for the first student PC) - or
+   keep 8, which is what the tested project uses. Mark the template as an
+   Ethernet switch if GNS3 offers that option.
 4. Open **Edit > Preferences > Docker > Docker containers > New**. Create:
    - `campus-client`: image `campus-client:1.0`, 1 adapter.
    - `campus-sensor`: image `campus-sensor:1.0`, 1 adapter.
@@ -116,13 +119,13 @@ side `eth0`; that is correct.
 | 4 | SW2 g0/1 | STAFF-PC1 eth0 |
 | 5 | SW2 g0/2 | STAFF-PC2 eth0 |
 | 6 | SW2 g0/3 | STAFF-PC3 eth0 |
-| 7 | SW2 g0/4 | STUDENT-PC1 eth0 |
-| 8 | SW2 g0/5 | STUDENT-PC2 eth0 |
-| 9 | SW2 g0/6 | STUDENT-PC3 eth0 |
-| 10 | SW3 g0/1 | GUEST-PC1 eth0 |
-| 11 | SW3 g0/2 | SENSOR-TEMP eth0 |
-| 12 | SW3 g0/3 | SENSOR-MOTION eth0 |
-| 13 | SW3 g0/4 | SENSOR-HUMIDITY eth0 |
+| 7 | SW2 Gi1/0 | STUDENT-PC1 eth0 |
+| 8 | SW2 Gi1/1 | STUDENT-PC2 eth0 |
+| 9 | SW2 Gi1/2 | STUDENT-PC3 eth0 |
+| 10 | SW3 Gi0/1 | GUEST-PC1 eth0 |
+| 11 | SW3 Gi0/2 | SENSOR-TEMP eth0 |
+| 12 | SW3 Gi0/3 | SENSOR-MOTION eth0 |
+| 13 | SW3 Gi1/0 | SENSOR-HUMIDITY eth0 |
 | 14 | R1 g0/1 | SERVER-CLOUD |
 | 15 | R1 g0/2 | R2 g0/0 |
 
@@ -142,16 +145,24 @@ Open each sensor node's configuration and set the environment variables:
 | SENSOR-MOTION | `motion-01` | `motion` | `0200.0000.4002` |
 | SENSOR-HUMIDITY | `humidity-01` | `humidity` | `0200.0000.4003` |
 
-The sensor MACs must match `radius/users`; MAB uses the Ethernet source MAC as
-the RADIUS User-Name. Prefer the GNS3 Docker node's **MAC address** field if
-your version offers one; that field normally expects the colon form
-(`02:00:00:00:40:01`), while `SENSOR_MAC` accepts the dotted form in the table.
-Otherwise the container entrypoint normalises the dotted `SENSOR_MAC` value to
-`02:00:00:00:40:01`, bounces `eth0`, and sets it; this requires `NET_ADMIN`
-(GNS3 usually grants it; if not, set the MAC in GNS3 instead).
+The sensor MACs must match both the SW3 port-security entry and `radius/users`.
+Prefer the GNS3 Docker node's **MAC address** field if your version offers one;
+that field normally expects the colon form (`02:00:00:00:40:01`), while
+`SENSOR_MAC` accepts the dotted form in the table. Otherwise the container
+entrypoint normalises the dotted `SENSOR_MAC` value to `02:00:00:00:40:01`,
+bounces `eth0`, and sets it; this requires `NET_ADMIN` (GNS3 usually grants it;
+if not, set the MAC in GNS3 instead).
 
-Leave `SENSOR_DHCP=1` so the container uses `udhcpc` on VLAN 40. The first
-DHCP discover may be sent before MAB completes; `udhcpc` retries for 90 seconds.
+Leave `SENSOR_DHCP=1` so the container uses `udhcpc` on VLAN 40.
+
+> **MAB on IOSvL2:** the `mab` command is accepted but the image never creates
+> an authentication session, so a MAB-configured port stays unauthorized and
+the sensor never passes DHCP. The shipped `configs/SW3.cfg` therefore uses
+`switchport port-security` with the fixed sensor MAC (one address, `restrict`)
+on the three IoT ports. On real Catalyst hardware, swap those lines for
+`authentication order mab`, `authentication port-control auto`, `mab` and
+`dot1x pae authenticator`; the RADIUS users file already contains the MAB
+identities.
 
 ### 6.2 Client nodes
 
@@ -209,9 +220,11 @@ on makes a failed paste easy to isolate.
   command), delete that line and re-paste the interface block.
 - If `authentication ...` or `dot1x ...` commands are rejected, the image's
   feature set does not include 802.1X. Do **not** invent replacement syntax.
-  Use the MAB-only fallback described in the README: keep the VLAN/trunk/DHCP
-  design, use `mab` on all access ports, and document the limitation in the
-  report. IOSvL2 and IOU L2 vary here; check `show dot1x all` after pasting.
+  Keep the VLAN/trunk/DHCP design and document the limitation in the report.
+  IOSvL2 and IOU L2 vary here; check `show dot1x all` after pasting.
+- MAB is accepted by IOSvL2 but does not work on it (frames arrive, no auth
+  session is created, the port stays unauthorized). `configs/SW3.cfg` uses
+  port security on the IoT ports for this reason; see `topology.md` section 3.
 - If `ip radius source-interface Vlan99` is rejected, use
   `ip radius source-interface Vlan 99` only if that is the syntax your image
   accepts; the normal IOS 15.2 form is `Vlan99`.
@@ -261,6 +274,7 @@ python3 tests/verify_configs.py
 | Containers cannot ping R1 | macvlan parent/veth/bridge not wired | Check `ip link` for `br-srv`, `srv-br`, `srv-mac`; ensure Cloud is on `br-srv` |
 | Switch cannot reach RADIUS | Wrong SVI/VLAN 99/trunk or ACL | `ping 192.168.50.10` from switch; `show ip interface brief`; check `MGMT_IN` counters |
 | `show authentication sessions` empty | 802.1X not enabled or port not access | `show dot1x all`; confirm `dot1x system-auth-control`; confirm `switchport mode access` |
-| Sensor not in VLAN 40 | MAB MAC mismatch or RADIUS format | `debug authentication` / `radiusd -X`; compare User-Name format with `users` |
+| Sensor not in VLAN 40 | Sensor MAC differs from the port-security entry | `show port-security interface Gi0/2`; `docker exec <sensor> cat /sys/class/net/eth0/address`; fix `SENSOR_MAC` |
+| `mab` accepted but no session | IOSvL2 MAB is non-functional | Port security is used instead; see the note in `configs/SW3.cfg` |
 | Client stuck unauthorised | wpa_supplicant driver/profile | `docker exec ... cat /tmp/wpa_supplicant.log`; confirm `WPA_CONF` path |
 | No MQTT messages | Sensor has no DHCP or ACL blocks 1883 | `docker logs` for sensor; `show access-lists` on R1; check `.20:1883` |

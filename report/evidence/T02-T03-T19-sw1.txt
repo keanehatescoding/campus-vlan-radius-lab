@@ -1,0 +1,77 @@
+show vlan brief
+
+VLAN Name                             Status    Ports
+---- -------------------------------- --------- -------------------------------
+1    default                          active    Gi0/3, Gi1/0, Gi1/1, Gi1/2
+                                                Gi1/3
+10   STAFF                            active    
+20   STUDENT                          active    
+30   GUEST                            active    
+40   IOT                              active    
+99   MGMT                             active    
+1002 fddi-default                     act/unsup 
+1003 token-ring-default               act/unsup 
+1004 fddinet-default                  act/unsup 
+1005 trnet-default                    act/unsup 
+SW1#
+SW1#show interfaces trunk
+
+Port        Mode             Encapsulation  Status        Native vlan
+Gi0/0       on               802.1q         trunking      1
+Gi0/1       on               802.1q         trunking      1
+Gi0/2       on               802.1q         trunking      1
+
+Port        Vlans allowed on trunk
+Gi0/0       10,20,30,40,99
+Gi0/1       10,20,30,40,99
+Gi0/2       10,20,30,40,99
+
+Port        Vlans allowed and active in management domain
+Gi0/0       10,20,30,40,99
+Gi0/1       10,20,30,40,99
+Gi0/2       10,20,30,40,99
+
+Port        Vlans in spanning tree forwarding state and not pruned
+Gi0/0       10,20,30,40,99
+Gi0/1       10,20,30,40,99
+Gi0/2       10,20,30,40,99
+SW1#
+SW1#show cdp neighbors
+Capability Codes: R - Router, T - Trans Bridge, B - Source Route Bridge
+                  S - Switch, H - Host, I - IGMP, r - Repeater, P - Phone, 
+                  D - Remote, C - CVTA, M - Two-port Mac Relay 
+
+Device ID        Local Intrfce     Holdtme    Capability  Platform  Port ID
+R1.campus.local  Gig 0/0           171              R B             Gig 0/0
+SW2.campus.local Gig 0/1           162              S I             Gig 0/0
+SW3.campus.local Gig 0/2           160              S I             Gig 0/0
+
+Total cdp entries displayed : 3
+SW1#
+SW1#show spanning-tree summary
+Switch is in rapid-pvst mode
+Root bridge for: VLAN0001, VLAN0010, VLAN0020, VLAN0030, VLAN0040, VLAN0099
+Extended system ID                      is enabled
+Portfast Default                        is disabled
+Portfast Edge BPDU Guard Default        is disabled
+Portfast Edge BPDU Filter Default       is disabled
+Loopguard Default                       is disabled
+PVST Simulation Default                 is enabled but inactive in rapid-pvst mode
+Bridge Assurance                        is enabled
+EtherChannel misconfig guard            is enabled
+Configured Pathcost method used is short
+UplinkFast                              is disabled
+BackboneFast                            is disabled
+
+Name                   Blocking Listening Learning Forwarding STP Active
+---------------------- -------- --------- -------- ---------- ----------
+VLAN0001                     0         0        0          5          5
+VLAN0010                     0         0        0          3          3
+VLAN0020                     0         0        0          3          3
+VLAN0030                     0         0        0          3          3
+VLAN0040                     0         0        0          3          3
+VLAN0099                     0         0        0          3          3
+---------------------- -------- --------- -------- ---------- ----------
+6 vlans                      0         0        0         20         20
+SW1#
+SW1#

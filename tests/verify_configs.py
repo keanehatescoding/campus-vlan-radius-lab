@@ -38,15 +38,20 @@ EXPECTED_ACCESS = {
     ("SW2", "GigabitEthernet0/1"): (10, "STAFF-PC1"),
     ("SW2", "GigabitEthernet0/2"): (10, "STAFF-PC2"),
     ("SW2", "GigabitEthernet0/3"): (10, "STAFF-PC3"),
-    ("SW2", "GigabitEthernet0/4"): (20, "STUDENT-PC1"),
-    ("SW2", "GigabitEthernet0/5"): (20, "STUDENT-PC2"),
-    ("SW2", "GigabitEthernet0/6"): (20, "STUDENT-PC3"),
+    ("SW2", "GigabitEthernet1/0"): (20, "STUDENT-PC1"),
+    ("SW2", "GigabitEthernet1/1"): (20, "STUDENT-PC2"),
+    ("SW2", "GigabitEthernet1/2"): (20, "STUDENT-PC3"),
     ("SW3", "GigabitEthernet0/1"): (30, "GUEST-PC1"),
     ("SW3", "GigabitEthernet0/2"): (40, "SENSOR-TEMP"),
     ("SW3", "GigabitEthernet0/3"): (40, "SENSOR-MOTION"),
-    ("SW3", "GigabitEthernet0/4"): (40, "SENSOR-HUMIDITY"),
+    ("SW3", "GigabitEthernet1/0"): (40, "SENSOR-HUMIDITY"),
 }
 MGMT_IPS = {"SW1": "192.168.99.11", "SW2": "192.168.99.12", "SW3": "192.168.99.13"}
+SENSOR_PORTS = {
+    "GigabitEthernet0/2": "0200.0000.4001",
+    "GigabitEthernet0/3": "0200.0000.4002",
+    "GigabitEthernet1/0": "0200.0000.4003",
+}
 EXPECTED_ACLS = {"STAFF_IN", "STUDENT_IN", "GUEST_IN", "IOT_IN", "MGMT_IN"}
 
 EXPECTED_USERS = {
@@ -281,15 +286,15 @@ def main() -> int:
             f"{sw} {iface}: switchport mode access",
         )
         c.check(node in block, f"{sw} {iface}: description identifies {node}")
-        c.check(
-            re.search(r"^authentication port-control auto$", block, re.M) is not None,
-            f"{sw} {iface}: authentication port-control auto",
-        )
-        c.check(
-            re.search(r"^dot1x pae authenticator$", block, re.M) is not None,
-            f"{sw} {iface}: dot1x pae authenticator",
-        )
         if vlan in (10, 20, 30):
+            c.check(
+                re.search(r"^authentication port-control auto$", block, re.M) is not None,
+                f"{sw} {iface}: authentication port-control auto",
+            )
+            c.check(
+                re.search(r"^dot1x pae authenticator$", block, re.M) is not None,
+                f"{sw} {iface}: dot1x pae authenticator",
+            )
             c.check(
                 re.search(r"^authentication order dot1x$", block, re.M) is not None,
                 f"{sw} {iface}: 802.1X is first authentication method",
@@ -307,13 +312,20 @@ def main() -> int:
                 f"{sw} {iface}: user port is not MAB-only",
             )
         else:
+            # IOSvL2 accepts "mab" but never creates an authentication session,
+            # so the shipped configs pin the sensor MAC with port security.
+            sensor_mac = SENSOR_PORTS.get(iface)
             c.check(
-                re.search(r"^authentication order mab$", block, re.M) is not None,
-                f"{sw} {iface}: MAB is the authentication method",
+                sensor_mac is not None and f"switchport port-security mac-address {sensor_mac}" in block,
+                f"{sw} {iface}: port security pins sensor MAC {sensor_mac}",
             )
             c.check(
-                re.search(r"^mab$", block, re.M) is not None,
-                f"{sw} {iface}: mab enabled",
+                re.search(r"^switchport port-security maximum 1$", block, re.M) is not None,
+                f"{sw} {iface}: port security allows one MAC",
+            )
+            c.check(
+                re.search(r"^switchport port-security violation restrict$", block, re.M) is not None,
+                f"{sw} {iface}: port security restricts unknown MACs",
             )
             c.check(
                 "authentication event fail action authorize vlan 30" not in block,
@@ -612,7 +624,7 @@ def main() -> int:
     # ------------------------------------------------------------------
     c.check("STAFF" in topology and "STUDENT" in topology and "GUEST" in topology and "IOT" in topology,
             "topology.md documents all four user VLANs")
-    for port in ("SW2 g0/1", "SW2 g0/4", "SW3 g0/1", "SW3 g0/2"):
+    for port in ("SW2 g0/1", "SW2 Gi1/0", "SW2 Gi1/2", "SW3 Gi0/1", "SW3 Gi0/2", "SW3 Gi1/0"):
         c.check(port in topology, f"topology.md documents port map entry {port}")
     c.check("8.8.8.8" in topology, "topology.md documents the simulated Internet host")
 
