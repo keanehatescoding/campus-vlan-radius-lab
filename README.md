@@ -196,14 +196,16 @@ saved project. Highlights:
 
 Evidence files: `report/evidence/T01-T20-r1.txt`, `T02-T03-T19-sw1.txt`,
 `T02-T19-sw2.txt`, `T02-T19-sw3.txt`, `T05-T15-sw2-sessions.txt`,
-`T06-T07-sw3-sessions.txt`, `T11`-`T14` matrices, `T16-mqtt-subscribe.txt`,
-`T17-T18-r1-acl-nat.txt`, `T18-nat-live.txt`.
+`T06-T07-sw3-sessions.txt`, `T09-wrongpass.txt`, `T10-no-response.txt`,
+`T11`-`T14` matrices, `T16-mqtt-subscribe.txt`, `T17-T18-r1-acl-nat.txt`,
+`T18-nat-live.txt`.
 
-**Not exercised live:** T08 (moving staff1 to another port), T09 (wrong
-password fallback), T10 (RADIUS no-response fallback) and the optional reload
-in T20. Their configuration is present and covered by the offline checks, but
-they need a maintenance window on the running lab. T19 is covered by the
-summary output rather than per-VLAN detail.
+**Not demonstrated live:** T08 (moving staff1 to another port) and T10
+(RADIUS no-response fallback). T10 was attempted: SW2 logs `RADIUS_DEAD` and
+counts the timeouts, but this IOSvL2 build does not apply the no-response
+VLAN override (the reject path, T09, does and is proven). The optional reload
+in T20 was not performed; T19 is covered by the summary output rather than
+per-VLAN detail.
 
 ## Offline validation performed
 

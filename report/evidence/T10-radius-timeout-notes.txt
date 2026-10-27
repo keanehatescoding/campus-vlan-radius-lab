@@ -1,0 +1,15 @@
+show logging | include RADIUS|DOT1X
+*Oct 27 08:38:41.083: %DOT1X-5-FAIL: Authentication failed for client (0242.9419.2300) on Interface Gi0/2 AuditSessionID C0A8630C00000011000E63B1
+*Oct 27 08:38:42.099: %DOT1X-5-FAIL: Authentication failed for client (0242.9419.2300) on Interface Gi0/2 AuditSessionID C0A8630C00000011000E63B1
+*Oct 27 08:38:43.116: %DOT1X-5-FAIL: Authentication failed for client (0242.9419.2300) on Interface Gi0/2 AuditSessionID C0A8630C00000011000E63B1
+*Oct 27 08:38:43.124: %DOT1X-5-RESULT_OVERRIDE: Authentication result overridden for client (0242.9419.2300) on Interface Gi0/2 AuditSessionID C0A8630C00000011000E63B1
+*Oct 27 08:42:50.049: %DOT1X-5-FAIL: Authentication failed for client (0242.b925.c200) on Interface Gi0/3 AuditSessionID C0A8630C00000012000E688E
+*Oct 27 08:43:59.886: %RADIUS-4-RADIUS_DEAD: RADIUS server 192.168.50.10:1812,1813 is not responding.
+*Oct 27 08:43:59.886: %RADIUS-4-RADIUS_ALIVE: RADIUS server 192.168.50.10:1812,1813 is being marked alive.
+*Oct 27 08:44:09.980: %DOT1X-5-FAIL: Authentication failed for client (0242.b925.c200) on Interface Gi0/3 AuditSessionID C0A8630C000000180029BBCE
+*Oct 27 08:45:11.345: %DOT1X-5-FAIL: Authentication failed for client (0242.b925.c200) on Interface Gi0/3 AuditSessionID C0A8630C000000180029BBCE
+*Oct 27 08:46:31.303: %RADIUS-4-RADIUS_DEAD: RADIUS server 192.168.50.10:1812,1813 is not responding.
+*Oct 27 08:46:31.303: %RADIUS-4-RADIUS_ALIVE: RADIUS server 192.168.50.10:1812,1813 is being marked alive.
+*Oct 27 08:46:31.304: %DOT1X-5-FAIL: Authentication failed for client (0242.b925.c200) on Interface Gi0/3 AuditSessionID C0A8630C000000180029BBCE
+SW2#
+SW2#

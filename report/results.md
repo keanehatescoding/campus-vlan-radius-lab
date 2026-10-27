@@ -16,8 +16,8 @@ command transcripts are in `report/evidence/`.
 | T06 student1/guest1 VLANs | Pass | `T05-T15-sw2-sessions.txt`, `T06-T07-sw3-sessions.txt` |
 | T07 Sensor access VLAN 40 | Pass (port security; see limitation) | `T06-T07-sw3-sessions.txt`, `T16-mqtt-subscribe.txt` |
 | T08 Move staff1 port | Not run | — |
-| T09 Wrong password fallback | Not run | — |
-| T10 RADIUS no-response fallback | Not run | — |
+| T09 Wrong password fallback | Pass | `T09-wrongpass.txt` |
+| T10 RADIUS no-response fallback | Not demonstrated | `T10-no-response.txt` |
 | T11 STAFF ACL matrix | Pass | `T11-staff-acl-matrix.txt` |
 | T12 STUDENT ACL matrix | Pass | `T12-student-acl-matrix.txt` |
 | T13 GUEST ACL matrix | Pass | `T13-guest-acl-matrix.txt` |
@@ -64,6 +64,23 @@ All three sensors then obtain 192.168.40.21-23 and publish to the broker.
 RADIUS is still MAB-ready: `radtest 0200.0000.4001` returns Access-Accept with
 `Tunnel-Private-Group-Id = "40"`.
 
+### Failed-auth fallback (T09)
+
+STAFF-PC2 was restarted with `wpa_supplicant-wrongpass.conf` on `Gi0/2`.
+RADIUS rejected staff1 three times, SW2 logged `DOT1X-5-RESULT_OVERRIDE` and
+applied `AUTH_FAIL_VLAN_Gi0/2` with `Vlan: 30`. A manual `udhcpc` on that
+container obtained 192.168.30.22; HTTP to 8.8.8.8 returned 401 while pings to
+192.168.10.21, 192.168.40.21 and 192.168.50.10 were dropped by the guest ACL.
+The node was then restored to the staff2 profile and re-authenticated in VLAN
+10 with 192.168.10.22.
+
+### RADIUS no-response (T10)
+
+With the RADIUS container stopped, SW2 logged `RADIUS_DEAD` and counted 16
+timeouts, but the port stayed unauthorized: the `no-response` action did not
+produce a VLAN 30 override on this IOSvL2 build. This is recorded as not
+demonstrated rather than passed.
+
 ### ACL and NAT
 
 - `STAFF_IN` 58 matches, 0 denies; all eight staff rows succeed, including
@@ -79,6 +96,8 @@ RADIUS is still MAB-ready: `radtest 0200.0000.4001` returns Access-Accept with
 
 ## Remaining work
 
-- T08/T09/T10 need a controlled reconnect/port move on the running lab.
+- T08 (moving staff1 to another port) still needs a controlled link move.
+- T10 is blocked by IOSvL2 behaviour (see above); a Catalyst build with the
+  same config would be the way to prove the no-response fallback.
 - T20 is complete for `write memory` and startup-config checks; the optional
   reload was not performed.

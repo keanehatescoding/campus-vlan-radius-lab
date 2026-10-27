@@ -1,0 +1,86 @@
+show authentication sessions
+
+Interface    Identifier     Method  Domain  Status Fg Session ID
+Gi0/1        0242.0404.2c00 dot1x   DATA    Auth      C0A8630C00000010000E5F1A
+Gi0/2        0242.9419.2300 dot1x   DATA    Auth      C0A8630C00000011000E63B1
+Gi1/0        0242.9658.c600 dot1x   DATA    Auth      C0A8630C00000013000E6D4D
+Gi1/1        0242.2257.3000 dot1x   DATA    Auth      C0A8630C00000014000E720A
+Gi1/2        0242.0e84.1700 dot1x   DATA    Auth      C0A8630C00000015000E76EC
+Gi0/3        0242.b925.c200 dot1x   DATA    Auth      C0A8630C00000012000E688E
+
+Session count = 6
+
+Key to Session Events Blocked Status Flags:
+
+  A - Applying Policy (multi-line status for details)
+  D - Awaiting Deletion
+  F - Final Removal in progress
+  I - Awaiting IIF ID allocation
+  N - Waiting for AAA to come up
+  P - Pushed Session
+  R - Removing User Profile (multi-line status for details)
+  U - Applying User Profile (multi-line status for details)
+  X - Unknown Blocker
+SW2#
+SW2#show authentication sessions interface GigabitEthernet0/2 details
+            Interface:  GigabitEthernet0/2
+          MAC Address:  0242.9419.2300
+         IPv6 Address:  Unknown
+         IPv4 Address:  Unknown
+            User-Name:  staff1
+               Status:  Authorized
+               Domain:  DATA
+       Oper host mode:  single-host
+     Oper control dir:  both
+      Session timeout:  N/A
+      Restart timeout:  N/A
+Periodic Acct timeout:  N/A
+       Session Uptime:  1515s
+    Common Session ID:  C0A8630C00000011000E63B1
+      Acct Session ID:  0x0000000D
+               Handle:  0x6F000002
+       Current Policy:  POLICY_Gi0/2
+
+Local Policies:
+	Service Template: DEFAULT_LINKSEC_POLICY_SHOULD_SECURE (priority 150)
+      Security Policy:  Should Secure
+      Security Status:  Link Unsecure
+	Service Template: AUTH_FAIL_VLAN_Gi0/2 (priority 150)
+           Vlan Group:  Vlan: 30
+
+Method status list: 
+      Method            State 
+
+      dot1x              Authc Failed
+
+SW2#
+SW2#
+### Fallback client ACL checks (wrong password -> VLAN 30)
+$ ping -c 3 -W 2 8.8.8.8
+PING 8.8.8.8 (8.8.8.8): 56 data bytes
+
+--- 8.8.8.8 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+
+$ curl -sS -m 6 -o /dev/null -w 'http_code=%{http_code}
+' http://8.8.8.8/ || echo curl_failed
+http_code=401
+
+$ ping -c 3 -W 2 192.168.10.21
+PING 192.168.10.21 (192.168.10.21): 56 data bytes
+
+--- 192.168.10.21 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+
+$ ping -c 3 -W 2 192.168.40.21
+PING 192.168.40.21 (192.168.40.21): 56 data bytes
+
+--- 192.168.40.21 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+
+$ ping -c 3 -W 2 192.168.50.10
+PING 192.168.50.10 (192.168.50.10): 56 data bytes
+
+--- 192.168.50.10 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+

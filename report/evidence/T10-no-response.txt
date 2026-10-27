@@ -1,0 +1,48 @@
+# T10 - RADIUS no-response fallback (observed, not demonstrated)
+
+Date: 2026-10-27. SW2 Gi0/3 (STAFF-PC3), RADIUS container stopped.
+
+## What was done
+
+1. `docker stop radius` (192.168.50.10 unreachable).
+2. `clear authentication sessions interface GigabitEthernet0/3`.
+3. `shutdown` / `no shutdown` on Gi0/3, then restarted STAFF-PC3 so the
+   supplicant started a fresh EAPOL exchange.
+4. Waited more than 60 s (the port's restart timeout) and checked the session.
+
+## Observed
+
+The switch detected the dead server and counted the retransmissions:
+
+```
+%RADIUS-4-RADIUS_DEAD: RADIUS server 192.168.50.10:1812,1813 is not responding.
+%DOT1X-5-FAIL: Authentication failed for client (0242.b925.c200) on Interface Gi0/3
+```
+
+`show radius statistics`: 16 timeouts, 4 packets without responses.
+
+`show authentication sessions interface GigabitEthernet0/3 details`:
+
+```
+User-Name:  staff3
+Status:     Unauthorized
+Domain:     UNKNOWN
+dot1x       Stopped
+```
+
+No `Vlan: 30` server policy and no `AUTH_NO_RESP_VLAN` service template were
+applied, unlike the reject path, which does apply `AUTH_FAIL_VLAN_Gi0/2`
+(see `T09-wrongpass.txt`). The port stayed unauthorized until RADIUS was
+restarted and the session cleared.
+
+## Conclusion
+
+- RADIUS unreachability is detected (RADIUS_DEAD, timeouts, dot1x FAIL).
+- On this IOSvL2 build, `authentication event no-response action authorize
+  vlan 30` does **not** produce the fallback authorization that
+  `authentication event fail action authorize vlan 30` does.
+- T10 is therefore recorded as **not demonstrated**, not as a pass. The reject
+  fallback (T09) works and is proven with a VLAN 30 lease.
+
+Service was restored afterwards: radius container up, staff3 cleared and
+re-authenticated in VLAN 10 with 192.168.10.23.
