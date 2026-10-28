@@ -300,24 +300,40 @@ Internet but cannot ping 192.168.10.x, 192.168.40.x, 192.168.50.x or
 **Evidence:** Access-Reject, session output showing VLAN 30, guest DHCP lease,
 failed internal pings.
 
-### T10 - RADIUS no-response -> guest fallback VLAN 30
+### T10 - RADIUS server dead -> guest fallback VLAN 30
 
-**Where:** a staff client, SW2, Docker host.
+**Where:** STAFF-PC3 on SW2 `Gi0/3`, Docker host.
 
 **Steps:**
 
-1. Stop RADIUS: `docker compose stop radius`.
-2. Reconnect a staff client on g0/2 (or `shutdown`/`no shutdown` the port).
-3. Wait for the authentication timeout (about 30-60 seconds).
-4. Check `show authentication sessions interface GigabitEthernet0/2 details`.
-5. Restart RADIUS: `docker compose up -d radius`.
+1. Stop RADIUS: `docker stop radius` (or `docker compose stop radius`).
+2. Force a fresh authentication attempt. Re-authentication on an already
+   authorized port does not test this path, because IOS keeps the last known
+   good session when a *re-auth* times out. Clear the session and restart
+   EAPOL instead:
+   - SW2: `clear authentication sessions interface GigabitEthernet0/3`
+   - client: `wpa_cli -i eth0 reassociate`
+     (or stop/start the endpoint in GNS3)
+3. Wait for the dead criteria: `radius-server dead-criteria time 10 tries 2`
+   with `timeout 5` / `retransmit 3` marks the server dead in roughly 30-60s.
+4. Check `show aaa servers` (`Dead: ... count`), `show logging` for
+   `%RADIUS-4-RADIUS_DEAD`, and
+   `show interface GigabitEthernet0/3 switchport` (`Access Mode VLAN: 30`).
+5. Renew DHCP on the client and test the guest ACL.
+6. Restart RADIUS (`docker start radius`), clear the session and reassociate;
+   confirm the port returns to VLAN 10.
 
-**Expected:** The port is authorized in VLAN 30 after the no-response event,
-and the client gets a 192.168.30.x lease. This proves
-`authentication event no-response action authorize vlan 30`.
+**Expected:** While RADIUS is unreachable, the port is authorized in **VLAN 30**
+by `authentication event server dead action authorize vlan 30`, and the client
+gets a 192.168.30.x lease. As in T09, HTTP to 8.8.8.8 succeeds while staff,
+RADIUS, MQTT and MGMT destinations are blocked by `GUEST_IN`.
 
-**Evidence:** Session output before/after, `show radius statistics` showing
-timeouts, guest DHCP lease.
+**Note:** `authentication event no-response` is about a silent *supplicant*,
+not a silent RADIUS server; it is not the right event for a RADIUS outage.
+`authentication event server dead` is the working fallback on this image.
+
+**Evidence:** `T10-server-dead.txt` - dead counter, `RADIUS_DEAD` syslog,
+session in VLAN 30, 192.168.30.22 lease, HTTP 401, blocked internal probes.
 
 ## 4. Firewall policy tests
 

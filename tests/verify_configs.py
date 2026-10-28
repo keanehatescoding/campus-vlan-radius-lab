@@ -304,8 +304,12 @@ def main() -> int:
                 f"{sw} {iface}: failed auth falls back to VLAN 30",
             )
             c.check(
+                "authentication event server dead action authorize vlan 30" in block,
+                f"{sw} {iface}: dead RADIUS server falls back to VLAN 30",
+            )
+            c.check(
                 "authentication event no-response action authorize vlan 30" in block,
-                f"{sw} {iface}: no RADIUS response falls back to VLAN 30",
+                f"{sw} {iface}: supplicant no-response falls back to VLAN 30",
             )
             c.check(
                 "mab" not in [line.strip() for line in lines],
@@ -529,6 +533,9 @@ def main() -> int:
                 f"{sw}: dot1x accounting uses RADIUS")
         c.check("dot1x system-auth-control" in text, f"{sw}: dot1x system-auth-control")
         c.check("ip radius source-interface Vlan99" in text, f"{sw}: RADIUS source interface is Vlan99")
+        if sw in ("SW2", "SW3"):
+            c.check("radius-server dead-criteria time 10 tries 2" in text,
+                    f"{sw}: RADIUS dead detection tuned so T10 fallback triggers quickly")
 
     keys: dict[str, str] = {}
     for sw in SWITCHES:

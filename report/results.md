@@ -17,7 +17,7 @@ command transcripts are in `report/evidence/`.
 | T07 Sensor access VLAN 40 | Pass (port security; see limitation) | `T06-T07-sw3-sessions.txt`, `T16-mqtt-subscribe.txt` |
 | T08 Move staff1 port | Not run | — |
 | T09 Wrong password fallback | Pass | `T09-wrongpass.txt` |
-| T10 RADIUS no-response fallback | Not demonstrated | `T10-no-response.txt` |
+| T10 RADIUS server-dead fallback | Pass | `T10-server-dead.txt` |
 | T11 STAFF ACL matrix | Pass | `T11-staff-acl-matrix.txt` |
 | T12 STUDENT ACL matrix | Pass | `T12-student-acl-matrix.txt` |
 | T13 GUEST ACL matrix | Pass | `T13-guest-acl-matrix.txt` |
@@ -74,12 +74,31 @@ container obtained 192.168.30.22; HTTP to 8.8.8.8 returned 401 while pings to
 The node was then restored to the staff2 profile and re-authenticated in VLAN
 10 with 192.168.10.22.
 
-### RADIUS no-response (T10)
+### RADIUS server dead (T10)
 
-With the RADIUS container stopped, SW2 logged `RADIUS_DEAD` and counted 16
-timeouts, but the port stayed unauthorized: the `no-response` action did not
-produce a VLAN 30 override on this IOSvL2 build. This is recorded as not
-demonstrated rather than passed.
+The first attempt used `authentication event no-response`, which is the
+*supplicant silent* event; it does not fire when RADIUS is unreachable. The
+working configuration is `authentication event server dead action authorize
+vlan 30`, plus `radius-server dead-criteria time 10 tries 2`.
+
+With the RADIUS container stopped, the session cleared and a fresh EAPOL
+exchange, SW2 logged `%RADIUS-4-RADIUS_DEAD` and the `Dead: ... count`
+incremented. `Gi0/3` was authorized in VLAN 30 (`UNKNOWN Auth` session) and
+STAFF-PC3 obtained 192.168.30.22. HTTP to 8.8.8.8 returned 401 (the simulated
+Internet listener), while pings to 192.168.10.21 and TCP to 192.168.50.10/20
+were dropped by `GUEST_IN`. After RADIUS restarted and the session was
+cleared, the port returned to VLAN 10 and the client renewed 192.168.10.23.
+
+Two operational notes:
+
+- A *re-authentication* timeout does not move an already authorized port; IOS
+  keeps the last known good session. T10 needs a fresh session (clear the
+  session / bounce the link).
+- The default dead criteria are slow (10 tries). The lab sets `time 10 tries 2`
+  so the fallback happens in under a minute.
+
+The same `server dead` policy is applied to every 802.1X user port on SW2 and
+to the guest port on SW3.
 
 ### ACL and NAT
 
@@ -97,7 +116,5 @@ demonstrated rather than passed.
 ## Remaining work
 
 - T08 (moving staff1 to another port) still needs a controlled link move.
-- T10 is blocked by IOSvL2 behaviour (see above); a Catalyst build with the
-  same config would be the way to prove the no-response fallback.
 - T20 is complete for `write memory` and startup-config checks; the optional
   reload was not performed.

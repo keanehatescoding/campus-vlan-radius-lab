@@ -196,16 +196,15 @@ saved project. Highlights:
 
 Evidence files: `report/evidence/T01-T20-r1.txt`, `T02-T03-T19-sw1.txt`,
 `T02-T19-sw2.txt`, `T02-T19-sw3.txt`, `T05-T15-sw2-sessions.txt`,
-`T06-T07-sw3-sessions.txt`, `T09-wrongpass.txt`, `T10-no-response.txt`,
+`T06-T07-sw3-sessions.txt`, `T09-wrongpass.txt`, `T10-server-dead.txt`,
 `T11`-`T14` matrices, `T16-mqtt-subscribe.txt`, `T17-T18-r1-acl-nat.txt`,
 `T18-nat-live.txt`.
 
-**Not demonstrated live:** T08 (moving staff1 to another port) and T10
-(RADIUS no-response fallback). T10 was attempted: SW2 logs `RADIUS_DEAD` and
-counts the timeouts, but this IOSvL2 build does not apply the no-response
-VLAN override (the reject path, T09, does and is proven). The optional reload
-in T20 was not performed; T19 is covered by the summary output rather than
-per-VLAN detail.
+**Not demonstrated live:** T08 (moving staff1 to another port). The optional
+reload in T20 was not performed; T19 is covered by the summary output rather
+than per-VLAN detail. T10 is proven with `authentication event server dead`
+(`RADIUS_DEAD` -> VLAN 30 -> DHCP in 192.168.30.0/24); `no-response` is the
+supplicant-silent event, not the RADIUS-outage event.
 
 ## Offline validation performed
 
@@ -263,6 +262,12 @@ that change.
 - **The Docker server segment is host-dependent.** The macvlan/veth/bridge
   setup must exist on the GNS3 server host. A GNS3 VM needs the same setup
   inside the VM. The Cloud node must select `br-srv`.
+- **Unclean host shutdowns lose running configs.** The QEMU overlays use
+  write-back caching, so a hard power-off or crash can drop what `write
+  memory` wrote; a clean `stop`/`start` of a node keeps it (verified on SW3).
+  After an unclean reboot, re-paste `configs/*.cfg`, `write memory`, and
+  restart the Cloud node so it re-attaches to `br-srv`. Recreating the bridge
+  and veth pair needs root: `radius/setup-server-bridge.sh`.
 - **Docker endpoint capabilities.** The client and sensor containers need
   `NET_ADMIN` (and `NET_RAW` for `wpa_supplicant -D wired`) to send EAPOL and,
   for sensors, to override the MAC. GNS3 normally grants these to Docker
