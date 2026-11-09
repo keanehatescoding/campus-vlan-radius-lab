@@ -194,8 +194,11 @@ def main() -> int:
         RADIUS / "setup-server-bridge.sh",
         SENSOR / "Dockerfile",
         SENSOR / "sensor.py",
+        SENSOR / "entrypoint.sh",
+        SENSOR / "udhcpc.script",
         CLIENTS / "Dockerfile",
         CLIENTS / "entrypoint.sh",
+        CLIENTS / "udhcpc.script",
     ]
     for path in required:
         c.check(path.exists(), f"required file exists: {path.relative_to(ROOT)}")
@@ -625,6 +628,12 @@ def main() -> int:
         c.check(needle in sensor_py, f"sensor: {label}")
     c.check("PUBLISH_INTERVAL" in sensor_py, "sensor: publish interval is configurable")
     c.check("5" in str(sensor_py), "sensor: default interval references 5 seconds")
+    
+    # Check sensor Dockerfile has required ENV variables
+    sensor_dockerfile = read(SENSOR / "Dockerfile")
+    c.check("MQTT_BROKER" in sensor_dockerfile, "sensor Dockerfile: MQTT_BROKER env var")
+    c.check("MQTT_PORT" in sensor_dockerfile, "sensor Dockerfile: MQTT_PORT env var")
+    c.check("PUBLISH_INTERVAL" in sensor_dockerfile, "sensor Dockerfile: PUBLISH_INTERVAL env var")
 
     # ------------------------------------------------------------------
     # Documentation sanity
