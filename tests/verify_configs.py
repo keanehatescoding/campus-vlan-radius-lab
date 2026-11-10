@@ -174,6 +174,69 @@ def parse_users(path: Path) -> dict[str, str]:
     return {name: " ".join(parts) for name, parts in entries.items()}
 
 
+def parse_dockerfile_env(dockerfile_text: str) -> set[str]:
+    """Parse active ENV instructions from a Dockerfile and return declared variable names.
+    
+    Handles:
+    - Active ENV lines (ignores commented-out lines)
+    - Continued lines (with backslash at end)
+    - Both ENV KEY=VALUE and ENV KEY VALUE forms
+    - Multi-variable ENV on one line or across multiple lines
+    """
+    env_vars: set[str] = set()
+    in_env = False
+    accumulated = ""
+    
+    for raw in dockerfile_text.splitlines():
+        # Strip only trailing whitespace for continuation detection
+        stripped_trail = raw.rstrip()
+        # Fully stripped for content checking
+        stripped = raw.strip()
+        
+        # Skip empty lines - they reset continuation
+        if not stripped:
+            in_env = False
+            accumulated = ""
+            continue
+        
+        # Skip comment lines - they reset continuation  
+        if stripped.startswith("#"):
+            in_env = False
+            accumulated = ""
+            continue
+        
+        # Check if we're in a continued ENV instruction
+        if in_env:
+            # Append the raw line (with leading spaces) to accumulated
+            accumulated += " " + raw
+            # Check if this line continues
+            in_env = stripped_trail.endswith("\\")
+        else:
+            # Check if this line starts an ENV instruction
+            if stripped.startswith("ENV ") or stripped.startswith("ENV\t"):
+                accumulated = raw
+                in_env = stripped_trail.endswith("\\")
+        
+        # If we have an accumulated ENV line and it's not continuing, process it
+        if accumulated and not in_env:
+            # Remove backslashes and normalize whitespace
+            cleaned = accumulated.replace("\\", "").strip()
+            # Remove the ENV keyword
+            if cleaned.startswith("ENV"):
+                env_part = cleaned[3:].strip()
+                # Parse variable assignments
+                # Split by spaces first, then handle KEY=VALUE tokens
+                for token in env_part.split():
+                    if "=" in token:
+                        var_name = token.split("=", 1)[0].strip()
+                        if var_name:
+                            env_vars.add(var_name)
+            # Reset for next ENV
+            accumulated = ""
+    
+    return env_vars
+
+
 def main() -> int:
     c = Checker()
 
@@ -194,8 +257,11 @@ def main() -> int:
         RADIUS / "setup-server-bridge.sh",
         SENSOR / "Dockerfile",
         SENSOR / "sensor.py",
+        SENSOR / "entrypoint.sh",
+        SENSOR / "udhcpc.script",
         CLIENTS / "Dockerfile",
         CLIENTS / "entrypoint.sh",
+        CLIENTS / "udhcpc.script",
     ]
     for path in required:
         c.check(path.exists(), f"required file exists: {path.relative_to(ROOT)}")
@@ -625,6 +691,13 @@ def main() -> int:
         c.check(needle in sensor_py, f"sensor: {label}")
     c.check("PUBLISH_INTERVAL" in sensor_py, "sensor: publish interval is configurable")
     c.check("5" in str(sensor_py), "sensor: default interval references 5 seconds")
+    
+    # Check sensor Dockerfile has required ENV variables
+    sensor_dockerfile = read(SENSOR / "Dockerfile")
+    sensor_env_vars = parse_dockerfile_env(sensor_dockerfile)
+    c.check("MQTT_BROKER" in sensor_env_vars, "sensor Dockerfile: MQTT_BROKER env var")
+    c.check("MQTT_PORT" in sensor_env_vars, "sensor Dockerfile: MQTT_PORT env var")
+    c.check("PUBLISH_INTERVAL" in sensor_env_vars, "sensor Dockerfile: PUBLISH_INTERVAL env var")
 
     # ------------------------------------------------------------------
     # Documentation sanity
