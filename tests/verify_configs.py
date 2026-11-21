@@ -286,7 +286,7 @@ def parse_dockerfile_env(dockerfile_text: str) -> set[str]:
             acc_rstripped = accumulated.rstrip()
             if acc_rstripped.endswith(chr(92)):
                 accumulated = acc_rstripped[:-1]
-            accumulated += " " + raw
+            accumulated += raw
             continuing = stripped_trail.endswith(chr(92))
             if not continuing:
                 finalize()
