@@ -241,7 +241,10 @@ def parse_dockerfile_env(dockerfile_text: str) -> set[str]:
     def finalize() -> None:
         nonlocal accumulated, is_env
         if is_env and accumulated:
-            cleaned = accumulated.replace(chr(92), "").strip()
+            cleaned = accumulated.rstrip()
+            if cleaned.endswith(chr(92)):
+                cleaned = cleaned[:-1]
+            cleaned = cleaned.strip()
             if cleaned.startswith("ENV"):
                 env_part = cleaned[3:].strip()
                 if env_part:
@@ -280,6 +283,9 @@ def parse_dockerfile_env(dockerfile_text: str) -> set[str]:
             continue
 
         if continuing:
+            acc_rstripped = accumulated.rstrip()
+            if acc_rstripped.endswith(chr(92)):
+                accumulated = acc_rstripped[:-1]
             accumulated += " " + raw
             continuing = stripped_trail.endswith(chr(92))
             if not continuing:
