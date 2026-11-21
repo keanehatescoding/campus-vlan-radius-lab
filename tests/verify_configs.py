@@ -174,77 +174,138 @@ def parse_users(path: Path) -> dict[str, str]:
     return {name: " ".join(parts) for name, parts in entries.items()}
 
 
-def parse_dockerfile_env(dockerfile_text: str) -> set[str]:
-    """Parse active ENV instructions from a Dockerfile and return declared variable names.
-    
-    Handles:
-    - Active ENV lines (ignores commented-out lines)
-    - Continued lines (with backslash at end)
-    - Both ENV KEY=VALUE and ENV KEY VALUE forms
-    - Multi-variable ENV on one line or across multiple lines
-    """
-    env_vars: set[str] = set()
-    in_env = False
-    accumulated = ""
-    
-    for raw in dockerfile_text.splitlines():
-        # Strip only trailing whitespace for continuation detection
-        stripped_trail = raw.rstrip()
-        # Fully stripped for content checking
-        stripped = raw.strip()
-        
-        # Skip empty lines - they reset continuation
-        if not stripped:
-            in_env = False
-            accumulated = ""
+def _tokenize_docker_env(env_part: str) -> list[str]:
+    tokens: list[str] = []
+    current: list[str] = []
+    i = 0
+    n = len(env_part)
+    in_single = False
+    in_double = False
+    while i < n:
+        ch = env_part[i]
+        if in_single:
+            current.append(ch)
+            if ch == "'":
+                in_single = False
+            i += 1
             continue
-        
-        # Skip comment lines - they reset continuation  
-        if stripped.startswith("#"):
-            in_env = False
-            accumulated = ""
+        if in_double:
+            current.append(ch)
+            if ch == chr(92):
+                if i + 1 < n:
+                    current.append(env_part[i + 1])
+                    i += 2
+                    continue
+            if ch == '"':
+                in_double = False
+            i += 1
             continue
-        
-        # Check if we're in a continued ENV instruction
-        if in_env:
-            # Append the raw line (with leading spaces) to accumulated
-            accumulated += " " + raw
-            # Check if this line continues
-            in_env = stripped_trail.endswith("\\")
-        else:
-            # Check if this line starts an ENV instruction
-            if stripped.startswith("ENV ") or stripped.startswith("ENV\t"):
-                accumulated = raw
-                in_env = stripped_trail.endswith("\\")
-            else:
-                # Not an ENV instruction: drop any stale accumulator.
-                accumulated = ""
+        if ch == "'":
+            in_single = True
+            current.append(ch)
+            i += 1
+            continue
+        if ch == '"':
+            in_double = True
+            current.append(ch)
+            i += 1
+            continue
+        if ch == chr(92):
+            if i + 1 < n:
+                current.append(env_part[i + 1])
+                i += 2
                 continue
+            current.append(ch)
+            i += 1
+            continue
+        if ch.isspace():
+            if current:
+                tokens.append("".join(current))
+                current = []
+            i += 1
+            continue
+        current.append(ch)
+        i += 1
+    if current:
+        tokens.append("".join(current))
+    return tokens
 
-        # If we have an accumulated ENV line and it's not continuing, process it
-        if accumulated and not in_env:
-            # Remove backslashes and normalize whitespace
-            cleaned = accumulated.replace("\\", "").strip()
-            # Remove the ENV keyword
+
+def parse_dockerfile_env(dockerfile_text: str) -> set[str]:
+    """Parse active ENV instructions from a Dockerfile and return declared variable names."""
+    env_vars: set[str] = set()
+    accumulated = ""
+    is_env = False
+    continuing = False
+
+    def finalize() -> None:
+        nonlocal accumulated, is_env
+        if is_env and accumulated:
+            cleaned = accumulated.replace(chr(92), "").strip()
             if cleaned.startswith("ENV"):
                 env_part = cleaned[3:].strip()
                 if env_part:
-                    first_token = env_part.split(None, 1)[0]
+                    tokens = _tokenize_docker_env(env_part)
+                    first_token = tokens[0] if tokens else ""
                     if "=" in first_token:
-                        # KEY=VALUE form (one or more variables on the line)
-                        for token in env_part.split():
+                        for token in tokens:
                             if "=" in token:
                                 var_name = token.split("=", 1)[0].strip()
+                                var_name = var_name.strip(chr(39) + chr(34))
                                 if var_name:
                                     env_vars.add(var_name)
                     else:
-                        # KEY VALUE form (single variable; value is the rest)
-                        env_vars.add(first_token)
-            # Reset for next ENV
-            accumulated = ""
-    
-    return env_vars
+                        name = first_token.strip(chr(39) + chr(34))
+                        if name:
+                            env_vars.add(name)
+        accumulated = ""
+        is_env = False
 
+    for raw in dockerfile_text.splitlines():
+        stripped_trail = raw.rstrip()
+        stripped = raw.strip()
+
+        if not stripped:
+            finalize()
+            continuing = False
+            accumulated = ""
+            is_env = False
+            continue
+
+        if stripped.startswith("#"):
+            finalize()
+            continuing = False
+            accumulated = ""
+            is_env = False
+            continue
+
+        if continuing:
+            accumulated += " " + raw
+            continuing = stripped_trail.endswith(chr(92))
+            if not continuing:
+                finalize()
+            continue
+
+        if accumulated:
+            finalize()
+
+        if stripped.startswith("ENV ") or stripped.startswith("ENV" + chr(9)):
+            is_env = True
+        else:
+            is_env = False
+        accumulated = raw
+        continuing = stripped_trail.endswith(chr(92))
+
+        if not continuing:
+            finalize()
+            accumulated = ""
+            is_env = False
+            continuing = False
+
+    if accumulated:
+        finalize()
+
+    return env_vars
 
 def main() -> int:
     c = Checker()
