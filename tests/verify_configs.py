@@ -216,7 +216,11 @@ def parse_dockerfile_env(dockerfile_text: str) -> set[str]:
             if stripped.startswith("ENV ") or stripped.startswith("ENV\t"):
                 accumulated = raw
                 in_env = stripped_trail.endswith("\\")
-        
+            else:
+                # Not an ENV instruction: drop any stale accumulator.
+                accumulated = ""
+                continue
+
         # If we have an accumulated ENV line and it's not continuing, process it
         if accumulated and not in_env:
             # Remove backslashes and normalize whitespace
@@ -224,13 +228,18 @@ def parse_dockerfile_env(dockerfile_text: str) -> set[str]:
             # Remove the ENV keyword
             if cleaned.startswith("ENV"):
                 env_part = cleaned[3:].strip()
-                # Parse variable assignments
-                # Split by spaces first, then handle KEY=VALUE tokens
-                for token in env_part.split():
-                    if "=" in token:
-                        var_name = token.split("=", 1)[0].strip()
-                        if var_name:
-                            env_vars.add(var_name)
+                if env_part:
+                    first_token = env_part.split(None, 1)[0]
+                    if "=" in first_token:
+                        # KEY=VALUE form (one or more variables on the line)
+                        for token in env_part.split():
+                            if "=" in token:
+                                var_name = token.split("=", 1)[0].strip()
+                                if var_name:
+                                    env_vars.add(var_name)
+                    else:
+                        # KEY VALUE form (single variable; value is the rest)
+                        env_vars.add(first_token)
             # Reset for next ENV
             accumulated = ""
     
@@ -698,6 +707,10 @@ def main() -> int:
     c.check("MQTT_BROKER" in sensor_env_vars, "sensor Dockerfile: MQTT_BROKER env var")
     c.check("MQTT_PORT" in sensor_env_vars, "sensor Dockerfile: MQTT_PORT env var")
     c.check("PUBLISH_INTERVAL" in sensor_env_vars, "sensor Dockerfile: PUBLISH_INTERVAL env var")
+    client_dockerfile = read(CLIENTS / "Dockerfile")
+    client_env_vars = parse_dockerfile_env(client_dockerfile)
+    c.check("WPA_CONF" in client_env_vars, "client Dockerfile: WPA_CONF env var")
+    c.check("CLIENT_NAME" in client_env_vars, "client Dockerfile: CLIENT_NAME env var")
 
     # ------------------------------------------------------------------
     # Documentation sanity
