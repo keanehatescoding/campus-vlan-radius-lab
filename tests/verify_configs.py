@@ -174,68 +174,144 @@ def parse_users(path: Path) -> dict[str, str]:
     return {name: " ".join(parts) for name, parts in entries.items()}
 
 
+def _tokenize_docker_env(env_part: str) -> list[str]:
+    tokens: list[str] = []
+    current: list[str] = []
+    i = 0
+    n = len(env_part)
+    in_single = False
+    in_double = False
+    while i < n:
+        ch = env_part[i]
+        if in_single:
+            current.append(ch)
+            if ch == "'":
+                in_single = False
+            i += 1
+            continue
+        if in_double:
+            current.append(ch)
+            if ch == chr(92):
+                if i + 1 < n:
+                    current.append(env_part[i + 1])
+                    i += 2
+                    continue
+            if ch == '"':
+                in_double = False
+            i += 1
+            continue
+        if ch == "'":
+            in_single = True
+            current.append(ch)
+            i += 1
+            continue
+        if ch == '"':
+            in_double = True
+            current.append(ch)
+            i += 1
+            continue
+        if ch == chr(92):
+            if i + 1 < n:
+                current.append(env_part[i + 1])
+                i += 2
+                continue
+            current.append(ch)
+            i += 1
+            continue
+        if ch.isspace():
+            if current:
+                tokens.append("".join(current))
+                current = []
+            i += 1
+            continue
+        current.append(ch)
+        i += 1
+    if current:
+        tokens.append("".join(current))
+    return tokens
+
+
 def parse_dockerfile_env(dockerfile_text: str) -> set[str]:
-    """Parse active ENV instructions from a Dockerfile and return declared variable names.
-    
-    Handles:
-    - Active ENV lines (ignores commented-out lines)
-    - Continued lines (with backslash at end)
-    - Both ENV KEY=VALUE and ENV KEY VALUE forms
-    - Multi-variable ENV on one line or across multiple lines
-    """
+    """Parse active ENV instructions from a Dockerfile and return declared variable names."""
     env_vars: set[str] = set()
-    in_env = False
     accumulated = ""
-    
-    for raw in dockerfile_text.splitlines():
-        # Strip only trailing whitespace for continuation detection
-        stripped_trail = raw.rstrip()
-        # Fully stripped for content checking
-        stripped = raw.strip()
-        
-        # Skip empty lines - they reset continuation
-        if not stripped:
-            in_env = False
-            accumulated = ""
-            continue
-        
-        # Skip comment lines - they reset continuation  
-        if stripped.startswith("#"):
-            in_env = False
-            accumulated = ""
-            continue
-        
-        # Check if we're in a continued ENV instruction
-        if in_env:
-            # Append the raw line (with leading spaces) to accumulated
-            accumulated += " " + raw
-            # Check if this line continues
-            in_env = stripped_trail.endswith("\\")
-        else:
-            # Check if this line starts an ENV instruction
-            if stripped.startswith("ENV ") or stripped.startswith("ENV\t"):
-                accumulated = raw
-                in_env = stripped_trail.endswith("\\")
-        
-        # If we have an accumulated ENV line and it's not continuing, process it
-        if accumulated and not in_env:
-            # Remove backslashes and normalize whitespace
-            cleaned = accumulated.replace("\\", "").strip()
-            # Remove the ENV keyword
+    is_env = False
+    continuing = False
+
+    def finalize() -> None:
+        nonlocal accumulated, is_env
+        if is_env and accumulated:
+            cleaned = accumulated.rstrip()
+            if cleaned.endswith(chr(92)):
+                cleaned = cleaned[:-1]
+            cleaned = cleaned.strip()
             if cleaned.startswith("ENV"):
                 env_part = cleaned[3:].strip()
-                # Parse variable assignments
-                # Split by spaces first, then handle KEY=VALUE tokens
-                for token in env_part.split():
-                    if "=" in token:
-                        var_name = token.split("=", 1)[0].strip()
-                        if var_name:
-                            env_vars.add(var_name)
-            # Reset for next ENV
-            accumulated = ""
-    
-    return env_vars
+                if env_part:
+                    tokens = _tokenize_docker_env(env_part)
+                    first_token = tokens[0] if tokens else ""
+                    if "=" in first_token:
+                        for token in tokens:
+                            if "=" in token:
+                                var_name = token.split("=", 1)[0].strip()
+                                var_name = var_name.strip(chr(39) + chr(34))
+                                if var_name:
+                                    env_vars.add(var_name)
+                    else:
+                        name = first_token.strip(chr(39) + chr(34))
+                        if name:
+                            env_vars.add(name)
+        accumulated = ""
+        is_env = False
 
+    for raw in dockerfile_text.splitlines():
+        stripped_trail = raw.rstrip()
+        stripped = raw.strip()
+
+        if not stripped:
+            finalize()
+            continuing = False
+            accumulated = ""
+            is_env = False
+            continue
+
+        if stripped.startswith("#"):
+            finalize()
+            continuing = False
+            accumulated = ""
+            is_env = False
+            continue
+
+        if continuing:
+            acc_rstripped = accumulated.rstrip()
+            if acc_rstripped.endswith(chr(92)):
+                accumulated = acc_rstripped[:-1]
+            accumulated += raw
+            continuing = stripped_trail.endswith(chr(92))
+            if not continuing:
+                finalize()
+            continue
+
+        if accumulated:
+            finalize()
+
+        if stripped.startswith("ENV ") or stripped.startswith("ENV" + chr(9)):
+            is_env = True
+        else:
+            is_env = False
+        accumulated = raw
+        continuing = stripped_trail.endswith(chr(92))
+
+        if not continuing:
+            finalize()
+            accumulated = ""
+            is_env = False
+            continuing = False
+
+    if accumulated:
+        finalize()
+
+    return env_vars
 
 def main() -> int:
     c = Checker()
@@ -698,6 +774,10 @@ def main() -> int:
     c.check("MQTT_BROKER" in sensor_env_vars, "sensor Dockerfile: MQTT_BROKER env var")
     c.check("MQTT_PORT" in sensor_env_vars, "sensor Dockerfile: MQTT_PORT env var")
     c.check("PUBLISH_INTERVAL" in sensor_env_vars, "sensor Dockerfile: PUBLISH_INTERVAL env var")
+    client_dockerfile = read(CLIENTS / "Dockerfile")
+    client_env_vars = parse_dockerfile_env(client_dockerfile)
+    c.check("WPA_CONF" in client_env_vars, "client Dockerfile: WPA_CONF env var")
+    c.check("CLIENT_NAME" in client_env_vars, "client Dockerfile: CLIENT_NAME env var")
 
     # ------------------------------------------------------------------
     # Documentation sanity
