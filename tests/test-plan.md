@@ -433,7 +433,7 @@ IOT_IN counters showing 1883 permits and deny counters.
 1. On SW2, test RADIUS reachability:
 
    ```text
-   test aaa group CAMPUS-RADIUS staff1 Staff1Pass! legacy
+   test aaa group CAMPUS-RADIUS staff1 LAB-STAFF1-CHANGE-ME legacy
    show radius statistics
    ```
 

@@ -25,17 +25,17 @@
 # ---------------------------------------------------------------------------
 # STAFF -> VLAN 10
 # ---------------------------------------------------------------------------
-staff1  Cleartext-Password := "Staff1Pass!"
+staff1  Cleartext-Password := "LAB-STAFF1-CHANGE-ME"
         Tunnel-Type = VLAN,
         Tunnel-Medium-Type = IEEE-802,
         Tunnel-Private-Group-Id = "10"
 
-staff2  Cleartext-Password := "Staff2Pass!"
+staff2  Cleartext-Password := "LAB-STAFF2-CHANGE-ME"
         Tunnel-Type = VLAN,
         Tunnel-Medium-Type = IEEE-802,
         Tunnel-Private-Group-Id = "10"
 
-staff3  Cleartext-Password := "Staff3Pass!"
+staff3  Cleartext-Password := "LAB-STAFF3-CHANGE-ME"
         Tunnel-Type = VLAN,
         Tunnel-Medium-Type = IEEE-802,
         Tunnel-Private-Group-Id = "10"
@@ -43,17 +43,17 @@ staff3  Cleartext-Password := "Staff3Pass!"
 # ---------------------------------------------------------------------------
 # STUDENT -> VLAN 20
 # ---------------------------------------------------------------------------
-student1  Cleartext-Password := "Student1Pass!"
+student1  Cleartext-Password := "LAB-STUDENT1-CHANGE-ME"
           Tunnel-Type = VLAN,
           Tunnel-Medium-Type = IEEE-802,
           Tunnel-Private-Group-Id = "20"
 
-student2  Cleartext-Password := "Student2Pass!"
+student2  Cleartext-Password := "LAB-STUDENT2-CHANGE-ME"
           Tunnel-Type = VLAN,
           Tunnel-Medium-Type = IEEE-802,
           Tunnel-Private-Group-Id = "20"
 
-student3  Cleartext-Password := "Student3Pass!"
+student3  Cleartext-Password := "LAB-STUDENT3-CHANGE-ME"
           Tunnel-Type = VLAN,
           Tunnel-Medium-Type = IEEE-802,
           Tunnel-Private-Group-Id = "20"
@@ -61,7 +61,7 @@ student3  Cleartext-Password := "Student3Pass!"
 # ---------------------------------------------------------------------------
 # GUEST -> VLAN 30
 # ---------------------------------------------------------------------------
-guest1  Cleartext-Password := "Guest1Pass!"
+guest1  Cleartext-Password := "LAB-GUEST1-CHANGE-ME"
         Tunnel-Type = VLAN,
         Tunnel-Medium-Type = IEEE-802,
         Tunnel-Private-Group-Id = "30"

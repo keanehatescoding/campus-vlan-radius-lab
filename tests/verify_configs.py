@@ -55,13 +55,13 @@ SENSOR_PORTS = {
 EXPECTED_ACLS = {"STAFF_IN", "STUDENT_IN", "GUEST_IN", "IOT_IN", "MGMT_IN"}
 
 EXPECTED_USERS = {
-    "staff1": ("10", "Staff1Pass!"),
-    "staff2": ("10", "Staff2Pass!"),
-    "staff3": ("10", "Staff3Pass!"),
-    "student1": ("20", "Student1Pass!"),
-    "student2": ("20", "Student2Pass!"),
-    "student3": ("20", "Student3Pass!"),
-    "guest1": ("30", "Guest1Pass!"),
+    "staff1": ("10", "LAB-STAFF1-CHANGE-ME"),
+    "staff2": ("10", "LAB-STAFF2-CHANGE-ME"),
+    "staff3": ("10", "LAB-STAFF3-CHANGE-ME"),
+    "student1": ("20", "LAB-STUDENT1-CHANGE-ME"),
+    "student2": ("20", "LAB-STUDENT2-CHANGE-ME"),
+    "student3": ("20", "LAB-STUDENT3-CHANGE-ME"),
+    "guest1": ("30", "LAB-GUEST1-CHANGE-ME"),
     "0200.0000.4001": ("40", None),
     "0200.0000.4002": ("40", None),
     "0200.0000.4003": ("40", None),
@@ -752,7 +752,11 @@ def main() -> int:
     c.check("192.168.50.20" in compose, "compose: MQTT container address .20")
     c.check("gateway: 192.168.50.1" in compose, "compose: gateway is R1 .1")
     c.check("listener 1883 0.0.0.0" in mosquitto, "mosquitto: listener on 1883")
-    c.check("allow_anonymous true" in mosquitto, "mosquitto: anonymous access for lab")
+    c.check("allow_anonymous false" in mosquitto, "mosquitto: anonymous access disabled")
+    c.check("password_file /mosquitto/config/mosquitto_passwd" in mosquitto,
+            "mosquitto: password file configured")
+    c.check("mosquitto_passwd:/mosquitto/config/mosquitto_passwd:ro" in compose,
+            "compose: broker password file mounted read-only")
     c.check(env.get("RADIUS_IP") == "192.168.50.10", "secrets.env RADIUS_IP matches compose")
     c.check(env.get("MQTT_IP") == "192.168.50.20", "secrets.env MQTT_IP matches compose")
     sensor_py = read(SENSOR / "sensor.py")

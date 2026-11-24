@@ -88,7 +88,7 @@ Method status list:
       dot1x              Authc Success
 
 SW2#
-SW2#test aaa group CAMPUS-RADIUS staff1 Staff1Pass! legacy
+SW2#test aaa group CAMPUS-RADIUS staff1 LAB-STAFF1-CHANGE-ME legacy
 Attempting authentication test to server-group CAMPUS-RADIUS using radius
 User was successfully authenticated.
 

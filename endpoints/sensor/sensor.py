@@ -22,6 +22,8 @@ import paho.mqtt.client as mqtt
 
 BROKER = os.getenv("MQTT_BROKER", "192.168.50.20")
 PORT = int(os.getenv("MQTT_PORT", "1883"))
+MQTT_USERNAME = os.getenv("MQTT_USERNAME", "campus_lab")
+MQTT_PASSWORD = os.getenv("MQTT_PASSWORD", "LAB-MQTT-CHANGE-ME")
 SENSOR_ID = os.getenv("SENSOR_ID", "sensor-01")
 SENSOR_TYPE = os.getenv("SENSOR_TYPE", "temperature").strip().lower()
 INTERVAL = float(os.getenv("PUBLISH_INTERVAL", "5"))
@@ -66,6 +68,7 @@ def connect_with_retry():
         client_id=SENSOR_ID,
         clean_session=True,
     )
+    client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
     client.reconnect_delay_set(min_delay=1, max_delay=30)
     while not _stop:
         try:

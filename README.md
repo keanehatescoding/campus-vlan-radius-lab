@@ -53,7 +53,7 @@ network-project/
     clients.conf                  SW1/SW2/SW3 RADIUS clients + secret
     users                         users, MAC users, Tunnel-* VLAN attributes
     secrets.env                   canonical list of lab secrets/placeholders
-    mosquitto.conf                lab broker (anonymous, port 1883)
+    mosquitto.conf                lab broker (authenticated, port 1883)
     setup-server-bridge.sh        br-srv + veth + macvlan plumbing
   endpoints/
     sensor/                       Dockerfile, sensor.py, DHCP/entrypoint
@@ -152,13 +152,17 @@ using the lab outside an isolated GNS3 project, change:
 | Secret | Where it appears |
 |---|---|
 | `RADIUS_SECRET` | `radius/secrets.env`, `radius/clients.conf` (4 clients), `configs/SW1.cfg`, `SW2.cfg`, `SW3.cfg` (`key 0 ...`) |
-| `DEVICE_ENABLE_SECRET` | `radius/secrets.env`, `enable secret` and `username admin ... secret` in all five Cisco configs |
+| `DEVICE_ENABLE_CODE` | `radius/secrets.env`, `enable secret` and `username admin ... secret` in all five Cisco configs |
 | Staff/student/guest passwords | `radius/secrets.env`, `radius/users`, `endpoints/client/wpa_supplicant-*.conf` |
 | Sensor MACs | `radius/secrets.env`, `radius/users`, GNS3 Docker node MAC / `SENSOR_MAC` |
 
-The checked-in value `S3cr3t-Shared-Key-2026` is a **placeholder shared
-secret**; it is intentionally easy to find. `tests/verify_configs.py` checks
-that the copies stay in sync but does not judge their strength.
+All checked-in credentials are obvious `LAB-*-CHANGE-ME` placeholders,
+including the MQTT broker password (`radius/mosquitto_passwd`).
+`tests/verify_configs.py` checks that the copies stay in sync but does
+not judge their strength. The previous lab values remain in git history:
+never reuse a value that was ever committed, and rotate anything that
+was used outside this isolated GNS3 project. For a real deployment,
+supply secrets from a secret manager and keep only `.env.example` in git.
 
 Do not commit real production secrets. Do not expose the lab's anonymous MQTT
 broker or RADIUS shared secret outside the isolated lab network.
