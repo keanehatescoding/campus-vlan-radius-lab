@@ -162,12 +162,15 @@ including the MQTT broker password (`radius/mosquitto_passwd`).
 For MQTT, change the broker hash and the sensor's `MQTT_PASSWORD` together;
 the broker refuses `campus_lab` if either side still holds the old default.
 A running broker does not reload the password file: recreate the container
-(`docker compose up -d --force-recreate mqtt`) or restart the broker after
+(`docker compose -f radius/docker-compose.yml up -d --force-recreate mqtt`) or restart the broker after
 rotating it, and expect existing client sessions to stay connected until
 they reconnect - a config reload alone does not disconnect them.
-`tests/verify_configs.py` does not compare the MQTT broker hash with the
-sensor `MQTT_PASSWORD`. It checks the other copies for sync, but it does
-not judge their strength. The previous lab values remain in git history:
+`tests/verify_configs.py` checks that the RADIUS secret, the staff/student/
+guest passwords and the sensor MACs agree between `secrets.env` and the
+configs they appear in. It does not compare the MQTT broker hash with the
+sensor `MQTT_PASSWORD`, and it does not compare `DEVICE_ENABLE_CODE` with the
+Cisco `enable secret` / `username admin ... secret` values - it only checks
+that an enable secret exists. It does not judge credential strength. The previous lab values remain in git history:
 never reuse a value that was ever committed, and rotate anything that
 was used outside this isolated GNS3 project. For a real deployment,
 supply secrets from a secret manager and keep only `.env.example` in git.
