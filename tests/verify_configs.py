@@ -54,14 +54,16 @@ SENSOR_PORTS = {
 }
 EXPECTED_ACLS = {"STAFF_IN", "STUDENT_IN", "GUEST_IN", "IOT_IN", "MGMT_IN"}
 
+# Password values are keys into secrets.env, the canonical source of truth.
+# This lets the checks keep working after credentials are rotated.
 EXPECTED_USERS = {
-    "staff1": ("10", "LAB-STAFF1-CHANGE-ME"),
-    "staff2": ("10", "LAB-STAFF2-CHANGE-ME"),
-    "staff3": ("10", "LAB-STAFF3-CHANGE-ME"),
-    "student1": ("20", "LAB-STUDENT1-CHANGE-ME"),
-    "student2": ("20", "LAB-STUDENT2-CHANGE-ME"),
-    "student3": ("20", "LAB-STUDENT3-CHANGE-ME"),
-    "guest1": ("30", "LAB-GUEST1-CHANGE-ME"),
+    "staff1": ("10", "STAFF1_PASSWORD"),
+    "staff2": ("10", "STAFF2_PASSWORD"),
+    "staff3": ("10", "STAFF3_PASSWORD"),
+    "student1": ("20", "STUDENT1_PASSWORD"),
+    "student2": ("20", "STUDENT2_PASSWORD"),
+    "student3": ("20", "STUDENT3_PASSWORD"),
+    "guest1": ("30", "GUEST1_PASSWORD"),
     "0200.0000.4001": ("40", None),
     "0200.0000.4002": ("40", None),
     "0200.0000.4003": ("40", None),
@@ -700,7 +702,8 @@ def main() -> int:
     for ip in MGMT_IPS.values():
         c.check(f"ipaddr       = {ip}" in clients_conf, f"clients.conf has a client for {ip}")
 
-    for name, (vlan, password) in EXPECTED_USERS.items():
+    for name, (vlan, password_key) in EXPECTED_USERS.items():
+        password = env.get(password_key) if password_key else None
         c.check(name in users, f"users file contains {name}")
         if name not in users:
             continue
@@ -728,7 +731,8 @@ def main() -> int:
     # ------------------------------------------------------------------
     # Supplicant profiles
     # ------------------------------------------------------------------
-    for name, (vlan, password) in EXPECTED_USERS.items():
+    for name, (vlan, password_key) in EXPECTED_USERS.items():
+        password = env.get(password_key) if password_key else None
         if password is None:
             continue
         path = CLIENTS / f"wpa_supplicant-{name}.conf"

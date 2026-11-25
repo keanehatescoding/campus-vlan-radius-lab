@@ -88,6 +88,12 @@ Method status list:
       dot1x              Authc Success
 
 SW2#
+NOTE: sanitized transcript. The original command used the old lab
+password; the placeholder above was substituted afterwards. The success
+output below was recorded with the original value and is NOT evidence
+that the placeholder credentials work. Re-run this test after rotating
+credentials before recording a fresh success.
+
 SW2#test aaa group CAMPUS-RADIUS staff1 LAB-STAFF1-CHANGE-ME legacy
 Attempting authentication test to server-group CAMPUS-RADIUS using radius
 User was successfully authenticated.

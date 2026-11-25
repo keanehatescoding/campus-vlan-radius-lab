@@ -155,9 +155,12 @@ using the lab outside an isolated GNS3 project, change:
 | `DEVICE_ENABLE_CODE` | `radius/secrets.env`, `enable secret` and `username admin ... secret` in all five Cisco configs |
 | Staff/student/guest passwords | `radius/secrets.env`, `radius/users`, `endpoints/client/wpa_supplicant-*.conf` |
 | Sensor MACs | `radius/secrets.env`, `radius/users`, GNS3 Docker node MAC / `SENSOR_MAC` |
+| MQTT broker password | `radius/mosquitto_passwd` (regenerate with `mosquitto_passwd -b radius/mosquitto_passwd campus_lab <new-password>`), `endpoints/sensor/Dockerfile` (`MQTT_PASSWORD`), the `MQTT_PASSWORD` default in `endpoints/sensor/sensor.py`, and the sensor's GNS3 environment |
 
 All checked-in credentials are obvious `LAB-*-CHANGE-ME` placeholders,
 including the MQTT broker password (`radius/mosquitto_passwd`).
+For MQTT, change the broker hash and the sensor's `MQTT_PASSWORD` together;
+the broker refuses `campus_lab` if either side still holds the old default.
 `tests/verify_configs.py` checks that the copies stay in sync but does
 not judge their strength. The previous lab values remain in git history:
 never reuse a value that was ever committed, and rotate anything that
