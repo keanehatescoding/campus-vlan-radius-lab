@@ -155,13 +155,18 @@ using the lab outside an isolated GNS3 project, change:
 | `DEVICE_ENABLE_CODE` | `radius/secrets.env`, `enable secret` and `username admin ... secret` in all five Cisco configs |
 | Staff/student/guest passwords | `radius/secrets.env`, `radius/users`, `endpoints/client/wpa_supplicant-*.conf` |
 | Sensor MACs | `radius/secrets.env`, `radius/users`, GNS3 Docker node MAC / `SENSOR_MAC` |
-| MQTT broker password | `radius/mosquitto_passwd` (regenerate with `mosquitto_passwd -b radius/mosquitto_passwd campus_lab <new-password>`), `endpoints/sensor/Dockerfile` (`MQTT_PASSWORD`), the `MQTT_PASSWORD` default in `endpoints/sensor/sensor.py`, and the sensor's GNS3 environment |
+| MQTT broker password | `radius/mosquitto_passwd` (regenerate interactively with `mosquitto_passwd radius/mosquitto_passwd campus_lab` so the password never appears in shell history or process arguments), `endpoints/sensor/Dockerfile` (`MQTT_PASSWORD`), the `MQTT_PASSWORD` default in `endpoints/sensor/sensor.py`, and the sensor's GNS3 environment |
 
 All checked-in credentials are obvious `LAB-*-CHANGE-ME` placeholders,
 including the MQTT broker password (`radius/mosquitto_passwd`).
 For MQTT, change the broker hash and the sensor's `MQTT_PASSWORD` together;
 the broker refuses `campus_lab` if either side still holds the old default.
-`tests/verify_configs.py` checks that the copies stay in sync but does
+A running broker does not reload the password file: recreate the container
+(`docker compose up -d --force-recreate mqtt`) or restart the broker after
+rotating it, and expect existing client sessions to stay connected until
+they reconnect - a config reload alone does not disconnect them.
+`tests/verify_configs.py` does not compare the MQTT broker hash with the
+sensor `MQTT_PASSWORD`. It checks the other copies for sync, but it does
 not judge their strength. The previous lab values remain in git history:
 never reuse a value that was ever committed, and rotate anything that
 was used outside this isolated GNS3 project. For a real deployment,

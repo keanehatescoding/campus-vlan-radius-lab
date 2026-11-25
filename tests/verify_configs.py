@@ -756,7 +756,13 @@ def main() -> int:
     c.check("192.168.50.20" in compose, "compose: MQTT container address .20")
     c.check("gateway: 192.168.50.1" in compose, "compose: gateway is R1 .1")
     c.check("listener 1883 0.0.0.0" in mosquitto, "mosquitto: listener on 1883")
-    c.check("allow_anonymous false" in mosquitto, "mosquitto: anonymous access disabled")
+    # Only an active directive counts: a commented-out `allow_anonymous false`
+    # next to an active `allow_anonymous true` would otherwise pass.
+    active_anon = re.findall(
+        r"^\s*allow_anonymous\s+(\S+)", mosquitto, re.M
+    )
+    c.check(bool(active_anon) and active_anon[-1] == "false",
+            "mosquitto: anonymous access disabled by the active directive")
     c.check("password_file /mosquitto/config/mosquitto_passwd" in mosquitto,
             "mosquitto: password file configured")
     c.check("mosquitto_passwd:/mosquitto/config/mosquitto_passwd:ro" in compose,
