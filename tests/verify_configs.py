@@ -769,10 +769,27 @@ def main() -> int:
     )
     c.check(bool(active_anon) and active_anon[-1] == "false",
             "mosquitto: anonymous access disabled by the active directive")
-    c.check("password_file /mosquitto/config/mosquitto_passwd" in mosquitto,
-            "mosquitto: password file configured")
-    c.check("mosquitto_passwd:/mosquitto/config/mosquitto_passwd:ro" in compose,
-            "compose: broker password file mounted read-only")
+    active_pw = re.findall(
+        r"^\s*password_file\s+(\S+)", mosquitto, re.M
+    )
+    c.check(bool(active_pw) and active_pw[-1] ==
+            "/mosquitto/config/mosquitto_passwd",
+            "mosquitto: password file set by the active directive")
+
+    # Check the active mount under the mqtt service, not a commented-out line.
+    mqtt_block = []
+    in_mqtt = False
+    for line in compose.splitlines():
+        if line and not line[0].isspace():
+            in_mqtt = line.strip() == "mqtt:"
+        elif in_mqtt and not line.lstrip().startswith("#"):
+            mqtt_block.append(line)
+    active_mounts = re.findall(
+        r"^\s*-\s+(\S+:\S+:\S+)", "\n".join(mqtt_block), re.M
+    )
+    c.check(any("mosquitto_passwd:/mosquitto/config/mosquitto_passwd:ro" in m
+                for m in active_mounts),
+            "compose: broker password file mounted read-only in mqtt service")
     c.check(env.get("RADIUS_IP") == "192.168.50.10", "secrets.env RADIUS_IP matches compose")
     c.check(env.get("MQTT_IP") == "192.168.50.20", "secrets.env MQTT_IP matches compose")
     sensor_py = read(SENSOR / "sensor.py")

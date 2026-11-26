@@ -32,7 +32,9 @@ for the results and the one platform gap (MAB on IOSvL2).
 5. **`mosquitto_passwd`** (from the `mosquitto` package) on the host for the
    MQTT rotation step below. Without a host install, use the broker image
    instead, interactively so the password never appears in arguments:
-   `docker run --rm -it -v "$PWD/radius:/mosquitto/config" eclipse-mosquitto:2.0 mosquitto_passwd -c /mosquitto/config/mosquitto_passwd campus_lab`
+   `docker run --rm -it --entrypoint mosquitto_passwd -v "$PWD/radius:/mosquitto/config" eclipse-mosquitto:2.0 -c /mosquitto/config/mosquitto_passwd campus_lab`
+   (`--entrypoint` avoids the image's default entrypoint, which recursively
+   chowns `/mosquitto` and would take ownership of the mounted `radius` dir).
 
 The Cisco images are **not** included and cannot be redistributed here. No
 image filenames are assumed: use whatever IOSv/IOSvL2 images you are licensed
