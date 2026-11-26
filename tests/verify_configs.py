@@ -780,8 +780,9 @@ def main() -> int:
     mqtt_block = []
     in_mqtt = False
     for line in compose.splitlines():
-        if line and not line[0].isspace():
-            in_mqtt = line.strip() == "mqtt:"
+        service = re.match(r"^  ([A-Za-z0-9_-]+):\s*$", line)
+        if service:
+            in_mqtt = service.group(1) == "mqtt"
         elif in_mqtt and not line.lstrip().startswith("#"):
             mqtt_block.append(line)
     active_mounts = re.findall(
