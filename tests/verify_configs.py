@@ -688,6 +688,12 @@ def main() -> int:
         if match:
             keys[sw] = match.group(1)
     c.check(len(set(keys.values())) == 1, "all switches use the same RADIUS key")
+    # A missing password key must not silently skip the comparisons below.
+    for key in ("STAFF1_PASSWORD", "STAFF2_PASSWORD", "STAFF3_PASSWORD",
+                "STUDENT1_PASSWORD", "STUDENT2_PASSWORD", "STUDENT3_PASSWORD",
+                "GUEST1_PASSWORD"):
+        c.check(bool(env.get(key)), f"secrets.env defines {key}")
+
     secret_env = env.get("RADIUS_SECRET")
     c.check(secret_env is not None, "secrets.env defines RADIUS_SECRET")
     if secret_env:

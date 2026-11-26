@@ -29,6 +29,10 @@ for the results and the one platform gap (MAB on IOSvL2).
 3. **GNS3 2.2.x** with a local Linux server (or a GNS3 VM with Docker).
 4. **Docker Engine + Compose v2** on the GNS3 server host, for FreeRADIUS,
    Mosquitto and the endpoint images.
+5. **`mosquitto_passwd`** (from the `mosquitto` package) on the host for the
+   MQTT rotation step below. Without a host install, use the broker image
+   instead, interactively so the password never appears in arguments:
+   `docker run --rm -it -v "$PWD/radius:/mosquitto/config" eclipse-mosquitto:2.0 mosquitto_passwd -c /mosquitto/config/mosquitto_passwd campus_lab`
 
 The Cisco images are **not** included and cannot be redistributed here. No
 image filenames are assumed: use whatever IOSv/IOSvL2 images you are licensed
