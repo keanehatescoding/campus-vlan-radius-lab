@@ -29,6 +29,12 @@ for the results and the one platform gap (MAB on IOSvL2).
 3. **GNS3 2.2.x** with a local Linux server (or a GNS3 VM with Docker).
 4. **Docker Engine + Compose v2** on the GNS3 server host, for FreeRADIUS,
    Mosquitto and the endpoint images.
+5. **`mosquitto_passwd`** (from the `mosquitto` package) on the host for the
+   MQTT rotation step below. Without a host install, use the broker image
+   instead, interactively so the password never appears in arguments:
+   `docker run --rm -it --entrypoint mosquitto_passwd -v "$PWD/radius:/mosquitto/config" eclipse-mosquitto:2.0 -c /mosquitto/config/mosquitto_passwd campus_lab`
+   (`--entrypoint` avoids the image's default entrypoint, which recursively
+   chowns `/mosquitto` and would take ownership of the mounted `radius` dir).
 
 The Cisco images are **not** included and cannot be redistributed here. No
 image filenames are assumed: use whatever IOSv/IOSvL2 images you are licensed
@@ -53,7 +59,7 @@ network-project/
     clients.conf                  SW1/SW2/SW3 RADIUS clients + secret
     users                         users, MAC users, Tunnel-* VLAN attributes
     secrets.env                   canonical list of lab secrets/placeholders
-    mosquitto.conf                lab broker (anonymous, port 1883)
+    mosquitto.conf                lab broker (authenticated, port 1883)
     setup-server-bridge.sh        br-srv + veth + macvlan plumbing
   endpoints/
     sensor/                       Dockerfile, sensor.py, DHCP/entrypoint
@@ -152,13 +158,28 @@ using the lab outside an isolated GNS3 project, change:
 | Secret | Where it appears |
 |---|---|
 | `RADIUS_SECRET` | `radius/secrets.env`, `radius/clients.conf` (4 clients), `configs/SW1.cfg`, `SW2.cfg`, `SW3.cfg` (`key 0 ...`) |
-| `DEVICE_ENABLE_SECRET` | `radius/secrets.env`, `enable secret` and `username admin ... secret` in all five Cisco configs |
+| `DEVICE_ENABLE_CODE` | `radius/secrets.env`, `enable secret` and `username admin ... secret` in all five Cisco configs |
 | Staff/student/guest passwords | `radius/secrets.env`, `radius/users`, `endpoints/client/wpa_supplicant-*.conf` |
 | Sensor MACs | `radius/secrets.env`, `radius/users`, GNS3 Docker node MAC / `SENSOR_MAC` |
+| MQTT broker password | `radius/mosquitto_passwd` (regenerate interactively with `mosquitto_passwd radius/mosquitto_passwd campus_lab` so the password never appears in shell history or process arguments), `endpoints/sensor/Dockerfile` (`MQTT_PASSWORD`), the `MQTT_PASSWORD` default in `endpoints/sensor/sensor.py`, and the sensor's GNS3 environment |
 
-The checked-in value `S3cr3t-Shared-Key-2026` is a **placeholder shared
-secret**; it is intentionally easy to find. `tests/verify_configs.py` checks
-that the copies stay in sync but does not judge their strength.
+All checked-in credentials are obvious `LAB-*-CHANGE-ME` placeholders,
+including the MQTT broker password (`radius/mosquitto_passwd`).
+For MQTT, change the broker hash and the sensor's `MQTT_PASSWORD` together;
+the broker refuses `campus_lab` if either side still holds the old default.
+A running broker does not reload the password file: recreate the container
+(`docker compose -f radius/docker-compose.yml up -d --force-recreate mqtt`) or restart the broker after
+rotating it, and expect existing client sessions to stay connected until
+they reconnect - a config reload alone does not disconnect them.
+`tests/verify_configs.py` checks that the RADIUS secret, the staff/student/
+guest passwords and the sensor MACs agree between `secrets.env` and the
+configs they appear in. It does not compare the MQTT broker hash with the
+sensor `MQTT_PASSWORD`, and it does not compare `DEVICE_ENABLE_CODE` with the
+Cisco `enable secret` / `username admin ... secret` values - it only checks
+that an enable secret exists. It does not judge credential strength. The previous lab values remain in git history:
+never reuse a value that was ever committed, and rotate anything that
+was used outside this isolated GNS3 project. For a real deployment,
+supply secrets from a secret manager and keep only `.env.example` in git.
 
 Do not commit real production secrets. Do not expose the lab's anonymous MQTT
 broker or RADIUS shared secret outside the isolated lab network.

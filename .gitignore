@@ -1,3 +1,7 @@
 __pycache__/
 *.py[cod]
 .DS_Store
+
+# Real secrets never go in git; only *.env.example is tracked.
+.env
+*.local.env

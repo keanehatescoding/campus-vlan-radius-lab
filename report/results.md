@@ -37,7 +37,7 @@ command transcripts are in `report/evidence/`.
   lease 192.168.10.21.
 - `SW2 Gi1/0` student1: `Authc Success`, `Vlan: 20`, lease 192.168.20.21.
 - `SW3 Gi0/1` guest1: `Authc Success`, `Vlan: 30`, lease 192.168.30.21.
-- `test aaa group CAMPUS-RADIUS staff1 Staff1Pass! legacy` returns
+- `test aaa group CAMPUS-RADIUS staff1 LAB-STAFF1-CHANGE-ME legacy` returns
   `User was successfully authenticated`; `show radius statistics` shows 13
   auth responses, 0 timeouts.
 
