@@ -247,7 +247,7 @@ def parse_dockerfile_env(dockerfile_text: str) -> set[str]:
             if cleaned.endswith(chr(92)):
                 cleaned = cleaned[:-1]
             cleaned = cleaned.strip()
-            if cleaned.startswith("ENV"):
+            if cleaned.upper().startswith("ENV"):
                 env_part = cleaned[3:].strip()
                 if env_part:
                     tokens = _tokenize_docker_env(env_part)
@@ -297,7 +297,7 @@ def parse_dockerfile_env(dockerfile_text: str) -> set[str]:
         if accumulated:
             finalize()
 
-        if stripped.startswith("ENV ") or stripped.startswith("ENV" + chr(9)):
+        if stripped.upper().startswith("ENV ") or stripped.upper().startswith("ENV" + chr(9)):
             is_env = True
         else:
             is_env = False
